@@ -20,7 +20,10 @@ def encode(column, plan_params, feature_statistics):
         enc_value = feature_statistics[column]['scaler'].transform(np.array([[value]])).item()
     elif feature_statistics[column].get('type') == str(FeatureType.categorical):
         value_dict = feature_statistics[column]['value_dict']
-        enc_value = value_dict[str(value)]
+        if value is None:
+            enc_value = 61
+        else:
+            enc_value = value_dict[str(value)]
     else:
         raise NotImplementedError
     return enc_value
@@ -224,7 +227,8 @@ def postgres_plan_collator(plans, feature_statistics=None, db_statistics=None, p
     sample_idxs = []
     for sample_idx, p in plans:
         sample_idxs.append(sample_idx)
-        labels.append(p.plan_runtime)
+        # labels.append(p.plan_runtime)
+        labels.append(p.plan_card)
         plan_to_graph(p, p.database_id, plan_depths, plan_features, plan_to_plan_edges, db_statistics,
                       feature_statistics, filter_to_plan_edges, filter_features, output_column_to_plan_edges,
                       output_column_features, column_to_output_column_edges, column_features, table_features,

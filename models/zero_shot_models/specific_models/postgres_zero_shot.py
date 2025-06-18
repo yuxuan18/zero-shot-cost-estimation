@@ -7,7 +7,8 @@ class PostgresZeroShotModel(ZeroShotModel):
     Zero-shot cost estimation model for postgres.
     """
     def __init__(self, plan_featurization_name=None, **zero_shot_kwargs):
-        plan_featurization, encoders = None, None
+        print(plan_featurization_name)
+        encoders = None
         if plan_featurization_name is not None:
             plan_featurization = postgres_plan_featurizations.__dict__[plan_featurization_name]
 

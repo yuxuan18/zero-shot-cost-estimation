@@ -1,0 +1,980 @@
+Explain String
+NodeGroup: `default`
+
+Cache Hit Status: 
+  - Plan cache matching phase1(not hit)
+  - Plan cache matching phase2(not hit)
+  - Result cache matching phase(not involved)
+
+Summary
+  Query ID: ffffffffd97d5ac2-1b8ad72592259e3
+  Start Time: 2025-06-14 04:13:36
+  End Time: 2025-06-14 04:13:36
+  Total: 115ms
+  Query Type: Query
+  Query State: EOF
+  User: root
+  Default Db: default_cluster:tpch_1g_db
+  Sql Statement: EXPLAIN ANALYZE VERBOSE SELECT
+\tsum(l_extendedprice) / 7.0 as avg_yearly
+from
+\tLINEITEM,
+\tPART
+where
+\tp_partkey = l_partkey
+\tand p_brand = 'Brand#12'
+\tand p_container = 'SM BAG'
+\tand l_quantity < (
+\t\tselect
+\t\t\t0.2 * avg(l_quantity)
+\t\tfrom
+\t\t\tLINEITEM
+\t\twhere
+\t\t\tl_partkey = p_partkey
+\t)
+  Execution Summary: (TotalCpuTime: 208.079ms, % non-child: 0.00%)
+    - Analyzer: 1.261ms
+    - Optimizer: 3.151ms
+    - Scheduler: 6.799ms
+    - Wait and Fetch Result Time: 93.374ms
+    - Fetch Result Count: 1
+  Analysis Stats Summary: 
+    - Rule stats: no rule has been triggered
+  Stats Calculation Summary: (TotalCpuTime: 707.369us, % non-child: 0.00%)
+
+PLAN FRAGMENT ID 0
+Fragment 0: (TotalCpuTime: 287.760us, % non-child: 0.00%)
+  - ExecTime: 97.000ms - 97.000ms
+  - MemoryLimit: 2.00 TB
+  - PeakMemoryUsage: 0.00 
+  FRAGMENT DISTRIBUTION: SINGLE
+  DATA SINK: RESULT SINK
+    ResultSink: (TotalCpuTime: 20.571us, % non-child: 7.15%)
+      - FirstBlockSendTime: 2025-06-14 04:13:36.515
+      - AppendBlockTime: 5.541us
+        - AddResultTime: 1.078us
+        - TupleConvertTime: 3.047us
+      - OutputChunks: 1
+      - OutputRows: 1
+      - OutputSize: 17.00 B
+      - ResultSendTime: 16.615us
+  QueryPipeline: (TotalCpuTime: 273.991ms, % non-child: 100.00%)
+
+  34: ProjectStep
+  |  expr list: 
+  |    0: divide(sum(tpch_1g_db.LINEITEM.L_EXTENDEDPRICE), 7.0):Decimal128(38,6)(nullable) -> avg_yearly:Decimal128(38,6)(nullable)
+  |  distribution properties: SINGLE
+  |    ExpressionTransform-34: (TotalCpuTime: 15.132us, % non-child: 5.26%)
+  |      - CpuTime: 15.132us - 15.132us
+  |      - DegreeOfParallelism: 1
+  |      - ExecTime: 44.186us - 44.186us
+  |      - FirstReadyWaitTime: 96.741ms - 96.741ms
+  |      - InputRows: 1
+  |      - OffCpuTime: 0ns - 0ns
+  |      - OpenTimes: 5
+  |      - OutputChunkSize: 1 - 1
+  |      - OutputChunks: 1
+  |      - OutputRows: 1
+  |      - OutputSize: 17.00 B
+  |      - PeakMemoryUsage: 192.00 B
+  |      - TotalOffCpuTime: 0ns
+  |      - WaitTimeInTaskQueue: 0ns - 0ns
+  |      - WorkTimes: 1
+  |  
+  43: MergingAggregatedStep
+  |  agg calls: [sum(sum(tpch_1g_db.LINEITEM.L_EXTENDEDPRICE)-state)->sum(tpch_1g_db.LINEITEM.L_EXTENDEDPRICE)]
+  |  needs finalize = true
+  |  Est. output rows: 1
+  |  Est. output size: 16 bytes
+  |  Est. confidence: NONE
+  |  Agg Exec Type: AUTO
+  |  hints used:
+  |    agg_exec_type = AUTO
+  |    agg_distribution_type = AUTO
+  |  distribution properties: SINGLE
+  |    MergingAggregatedTransform-43: (TotalCpuTime: 35.924us, % non-child: 12.48%)
+  |      - CpuTime: 35.924us - 35.924us
+  |      - DegreeOfParallelism: 1
+  |      - ExecTime: 8.553ms - 8.553ms
+  |      - FirstReadyWaitTime: 88.225ms - 88.225ms
+  |      - InputRows: 3
+  |      - OffCpuTime: 0ns - 0ns
+  |      - OpenTimes: 10
+  |      - OutputChunkSize: 1 - 1
+  |      - OutputChunks: 1
+  |      - OutputRows: 1
+  |      - OutputSize: 17.00 B
+  |      - PeakMemoryUsage: 8.38 KB
+  |      - SpilledFilesNum: 0
+  |      - TotalOffCpuTime: 0ns
+  |      - WaitTimeInTaskQueue: 0ns - 42.249us
+  |      - WorkTimes: 5
+  |  
+  48: LocalExchangeStep
+  |  ExchangeType: MERGE
+  |  distribution properties: SINGLE
+  |    LocalExchangerV3ReceiverResize-48: (TotalCpuTime: 20.258us, % non-child: 7.04%)
+  |      - CpuTime: 20.258us - 20.258us
+  |      - DegreeOfParallelism: 1
+  |      - ExecTime: 96.595ms - 96.595ms
+  |      - FirstReadyWaitTime: 106.415us - 106.415us
+  |      - InputRows: 0
+  |      - OffCpuTime: 96.528ms - 96.528ms
+  |      - OpenTimes: 8
+  |      - OutputChunkSize: 1 - 1
+  |      - OutputChunks: 3
+  |      - OutputRows: 3
+  |      - OutputSize: 88.00 B
+  |      - TotalOffCpuTime: 96.528ms
+  |      - WaitTimeInTaskQueue: 0ns - 0ns
+  |      - WorkTimes: 4
+  |    LocalExchangerV3SenderResize-48: (TotalCpuTime: 21.791us, % non-child: 7.57%)
+  |      - CpuTime: 3.784us - 10.029us
+  |      - DegreeOfParallelism: 3
+  |      - ExecTime: 31.361us - 151.552us
+  |      - FirstReadyWaitTime: 88.163ms - 96.525ms
+  |      - InputRows: 3
+  |      - OffCpuTime: 0ns - 9.998us
+  |      - OpenTimes: 12
+  |      - OutputChunkSize: 1 - 1
+  |      - OutputChunks: 3
+  |      - OutputRows: 3
+  |      - OutputSize: 88.00 B
+  |      - TotalOffCpuTime: 14.565us
+  |      - WaitTimeInTaskQueue: 0ns - 0ns
+  |      - WorkTimes: 3
+  |  
+  42: ExchangeStep
+     needMergeSorted: false
+     ExchangeType: MERGE
+     distribution properties: SINGLE
+       SourceFromDataStream-42: (TotalCpuTime: 85.089us, % non-child: 29.57%)
+         - CpuTime: 24.465us - 30.397us
+         - DegreeOfParallelism: 3
+         - ExecTime: 88.197ms - 96.584ms
+         - FirstReadyWaitTime: 68.969us - 71.933us
+         - InputRows: 0
+         - OffCpuTime: 88.125ms - 96.517ms
+         - OpenTimes: 12
+         - OutputChunkSize: 1 - 1
+         - OutputChunks: 3
+         - OutputRows: 3
+         - OutputSize: 88.00 B
+         - TotalOffCpuTime: 273.836ms
+         - WaitTimeInTaskQueue: 0ns - 0ns
+         - WorkTimes: 6
+       DataStreamRecvr-42: (TotalCpuTime: 273.986ms, % non-child: 100.00%)
+         - FirstBlockArrivalTime: 2025-06-14 04:13:36.506
+         - ApproxDataTransmitTime: 162.390us - 162.390us
+         - BytesReceived: 56.00 B
+         - DataArrivalWaitTime: 273.885ms
+         - DegreeOfParallelism: 1
+         - DeserializeBlockTime: 12.525us
+         - FirstBlockArrivalWaitTime: 273.644ms
+         - NumQueues: 3
+         - NumSendersPerQueue: 1
+         - OutputChunkSize: 0 - 1
+         - OutputChunks: 6
+         - OutputRows: 3
+         - SendersBlockedTotalTime: 0ns
+
+PLAN FRAGMENT ID 1
+Fragment 1: (TotalCpuTime: 272.119ms, % non-child: 0.00%)
+  - DegreeOfParallelism-25: 3
+  - ExecTime: 87.066ms - 95.334ms
+  - MemoryLimit: 6.00 TB
+  - PeakMemoryUsage: 33.82 MB
+  FRAGMENT DISTRIBUTION: RANDOM
+  DATA SINK: DS DATA EXCHANGE
+    DEST. EXCHANGE ID: 42
+    OUTPUT DISTRIBUTION: SINGLE
+    DataStreamSender: (TotalCpuTime: 796.484us, % non-child: 0.29%)
+      - FirstBlockSendTime: 2025-06-14 04:13:36.515
+      - BytesSent: 56.00 B
+      - CloseWaitTime: 653.628us
+      - IndexBlockTime: 0ns
+      - MergeBlockTime: 0ns
+      - OutputChunkSize: 1 - 1
+      - OutputChunks: 3
+      - OutputRows: 3
+      - OverallThroughput: 146.5068359375 KB/sec
+      - SendStallTime: 33.733us
+      - SerializeBlockTime: 2.774us
+      - SplitBlockTime: 0ns
+  QueryPipeline: (TotalCpuTime: 813.344ms, % non-child: 100.00%)
+
+  41: PartialAggregatingStep
+  |  agg calls: [sum(tpch_1g_db.LINEITEM.L_EXTENDEDPRICE)->sum(tpch_1g_db.LINEITEM.L_EXTENDEDPRICE)-state]
+  |  needs finalize = false
+  |  Est. output rows: 1
+  |  Est. output size: 16 bytes
+  |  Est. confidence: 0.01
+  |  Agg Exec Type: AUTO
+  |  hints used:
+  |    agg_exec_type = AUTO
+  |    agg_distribution_type = AUTO
+  |  distribution properties: RANDOM
+  |    AggregatingTransform-41: (TotalCpuTime: 462.593us, % non-child: 0.17%)
+  |      - CpuTime: 138.778us - 162.688us
+  |      - DegreeOfParallelism: 3
+  |      - ExecTime: 25.691ms - 32.472ms
+  |      - FirstReadyWaitTime: 60.596ms - 62.436ms
+  |      - InputRows: 568
+  |      - IsSwitchedToStreamingAgg: 0
+  |      - OffCpuTime: 0ns - 0ns
+  |      - OpenTimes: 759
+  |      - OutputChunkSize: 1 - 1
+  |      - OutputChunks: 3
+  |      - OutputRows: 3
+  |      - OutputSize: 24.00 B
+  |      - PeakMemoryUsage: 22.13 KB
+  |      - SpilledFilesNum: 0
+  |      - TotalOffCpuTime: 0ns
+  |      - WaitTimeInTaskQueue: 0ns - 0ns
+  |      - WorkTimes: 378
+  |  
+  32: HashJoinStep
+  |  join op: LEFT SEMI JOIN
+  |  equal join conjunct: tpch_1g_db.PART.P_PARTKEY = $a$1.tpch_1g_db.LINEITEM.L_PARTKEY
+  |  other join conjunct: tpch_1g_db.LINEITEM.L_QUANTITY < $a$1.multiply(0.2, $a$1.avg($a$1.tpch_1g_db.LINEITEM.L_QUANTITY))
+  |  Est. output rows: 81032808321506240
+  |  Est. output size: 1 EB
+  |  Est. confidence: 0.01
+  |  join method: HASH_V2
+  |  distribution properties: RANDOM
+  |    FillingRightJoinSide-32-rhs: (TotalCpuTime: 38.427ms, % non-child: 14.12%)
+  |      - BuildFinishedTime: 17.822us
+  |      - BypassProbeBlockCount: 0
+  |      - CpuTime: 11.373ms - 13.560ms
+  |      - DegreeOfParallelism: 3
+  |      - ExecTime: 11.423ms - 13.753ms
+  |      - FirstReadyWaitTime: 48.407ms - 49.113ms
+  |      - FlatHashTableBufSize: 786.429K (786429)
+  |      - HashJoinHashTableCollisions: 0
+  |      - HashJoinHashTableSize: 600.0K (600000)
+  |      - InputRows: 600.0K (600000)
+  |      - IsEarlyTerminated: 0
+  |      - OffCpuTime: 0ns - 0ns
+  |      - OpenTimes: 99
+  |      - OutputChunkSize:  - 
+  |      - OutputChunks: 0
+  |      - OutputRows: 0
+  |      - OutputSize: 0.00 
+  |      - PeakMemoryUsage: 34.69 MB
+  |      - RuntimeFilterBuildTime: 420ns
+  |      - RuntimeFilterMergingTime: 0ns
+  |      - TotalOffCpuTime: 0ns
+  |      - WaitTimeInTaskQueue: 0ns - 0ns
+  |      - WorkTimes: 48
+  |    JoiningTransform-32-lhs: (TotalCpuTime: 7.303ms, % non-child: 2.68%)
+  |      - CpuTime: 2.048ms - 2.660ms
+  |      - DegreeOfParallelism: 3
+  |      - ExecTime: 25.676ms - 32.469ms
+  |      - FirstReadyWaitTime: 60.494ms - 62.295ms
+  |      - InputRows: 6.298K (6298)
+  |      - IsEarlyTerminated: 0
+  |      - OffCpuTime: 0ns - 0ns
+  |      - OpenTimes: 1.128K (1128)
+  |      - OutputChunkSize: 0 - 5
+  |      - OutputChunks: 372
+  |      - OutputRows: 568
+  |      - OutputSize: 13.31 KB
+  |      - PeakMemoryUsage: 2.75 KB
+  |      - TotalOffCpuTime: 0ns
+  |      - WaitTimeInTaskQueue: 0ns - 0ns
+  |      - WorkTimes: 375
+  |  
+  |----47: LocalExchangeStep
+  |    |  ExchangeType: MERGE
+  |    |  distribution properties: REPLICATE
+  |    |    LocalExchangerV3ReceiverResize-47: (TotalCpuTime: 94.400us, % non-child: 0.03%)
+  |    |      - CpuTime: 29.831us - 34.423us
+  |    |      - DegreeOfParallelism: 3
+  |    |      - ExecTime: 60.321ms - 62.073ms
+  |    |      - FirstReadyWaitTime: 194.774us - 268.642us
+  |    |      - InputRows: 0
+  |    |      - OffCpuTime: 48.266ms - 48.856ms
+  |    |      - OpenTimes: 96
+  |    |      - OutputChunkSize: 985 - 16.321K (16321)
+  |    |      - OutputChunks: 45
+  |    |      - OutputRows: 600.0K (600000)
+  |    |      - OutputSize: 11.44 MB
+  |    |      - TotalOffCpuTime: 145.612ms
+  |    |      - WaitTimeInTaskQueue: 0ns - 102.566us
+  |    |      - WorkTimes: 48
+  |    |    LocalExchangerV3SenderResize-47: (TotalCpuTime: 110.836us, % non-child: 0.04%)
+  |    |      - CpuTime: 8.212us - 20.701us
+  |    |      - DegreeOfParallelism: 9
+  |    |      - ExecTime: 3.697ms - 6.152ms
+  |    |      - FirstReadyWaitTime: 48.359ms - 50.071ms
+  |    |      - InputRows: 600.0K (600000)
+  |    |      - OffCpuTime: 0ns - 9.772us
+  |    |      - OpenTimes: 108
+  |    |      - OutputChunkSize: 985 - 16.321K (16321)
+  |    |      - OutputChunks: 45
+  |    |      - OutputRows: 600.0K (600000)
+  |    |      - OutputSize: 11.44 MB
+  |    |      - TotalOffCpuTime: 25.493us
+  |    |      - WaitTimeInTaskQueue: 0ns - 0ns
+  |    |      - WorkTimes: 45
+  |    |  
+  |    40: ExchangeStep
+  |       needMergeSorted: false
+  |       ExchangeType: BROADCAST
+  |       distribution properties: REPLICATE
+  |         SourceFromDataStream-40: (TotalCpuTime: 673.026us, % non-child: 0.25%)
+  |           - CpuTime: 57.236us - 87.724us
+  |           - DegreeOfParallelism: 9
+  |           - ExecTime: 53.239ms - 55.324ms
+  |           - FirstReadyWaitTime: 175.401us - 233.653us
+  |           - InputRows: 0
+  |           - OffCpuTime: 53.109ms - 55.169ms
+  |           - OpenTimes: 108
+  |           - OutputChunkSize: 985 - 16.321K (16321)
+  |           - OutputChunks: 45
+  |           - OutputRows: 600.0K (600000)
+  |           - OutputSize: 11.44 MB
+  |           - TotalOffCpuTime: 487.614ms
+  |           - WaitTimeInTaskQueue: 0ns - 0ns
+  |           - WorkTimes: 54
+  |         DataStreamRecvr-40: (TotalCpuTime: 490.896ms, % non-child: 100.00%)
+  |           - FirstBlockArrivalTime: 2025-06-14 04:13:36.468
+  |           - ApproxDataTransmitTime: 4.471ms - 5.414ms
+  |           - BytesReceived: 7.63 MB
+  |           - DataArrivalWaitTime: 488.060ms
+  |           - DegreeOfParallelism: 3
+  |           - DeserializeBlockTime: 860.640us
+  |           - FirstBlockArrivalWaitTime: 441.516ms
+  |           - NumQueues: 9
+  |           - NumSendersPerQueue: 3
+  |           - OutputChunkSize: 0 - 16.321K (16321)
+  |           - OutputChunks: 54
+  |           - OutputRows: 600.0K (600000)
+  |           - SendersBlockedTotalTime: 0ns
+  |    
+  30: HashJoinStep
+  |  join op: INNER JOIN
+  |  equal join conjunct: tpch_1g_db.LINEITEM.L_PARTKEY = tpch_1g_db.PART.P_PARTKEY
+  |  Est. output rows: 180036450000
+  |  Est. output size: 3 TB
+  |  Est. confidence: 0.15
+  |  join method: HASH_V2
+  |  distribution properties: RANDOM
+  |    FillingRightJoinSide-30-rhs: (TotalCpuTime: 266.976us, % non-child: 0.10%)
+  |      - BuildFinishedTime: 13.942us
+  |      - BypassProbeBlockCount: 0
+  |      - CpuTime: 87.829us - 90.073us
+  |      - DegreeOfParallelism: 3
+  |      - ExecTime: 2.753ms - 2.895ms
+  |      - FirstReadyWaitTime: 1.918ms - 2.123ms
+  |      - FlatHashTableBufSize: 765
+  |      - HashJoinHashTableCollisions: 0
+  |      - HashJoinHashTableSize: 630
+  |      - InputRows: 630
+  |      - IsEarlyTerminated: 0
+  |      - OffCpuTime: 0ns - 0ns
+  |      - OpenTimes: 99
+  |      - OutputChunkSize:  - 
+  |      - OutputChunks: 0
+  |      - OutputRows: 0
+  |      - OutputSize: 0.00 
+  |      - PeakMemoryUsage: 22.48 KB
+  |      - RuntimeFilterBuildTime: 485ns
+  |      - RuntimeFilterMergingTime: 0ns
+  |      - TotalOffCpuTime: 0ns
+  |      - WaitTimeInTaskQueue: 0ns - 0ns
+  |      - WorkTimes: 48
+  |    LocalExchangerV3ReceiverResize-30-rhs: (TotalCpuTime: 127.660us, % non-child: 0.05%)
+  |      - CpuTime: 38.933us - 47.986us
+  |      - DegreeOfParallelism: 3
+  |      - ExecTime: 4.603ms - 4.750ms
+  |      - FirstReadyWaitTime: 149.775us - 192.189us
+  |      - InputRows: 0
+  |      - OffCpuTime: 4.423ms - 4.578ms
+  |      - OpenTimes: 96
+  |      - OutputChunkSize: 1 - 24
+  |      - OutputChunks: 45
+  |      - OutputRows: 630
+  |      - OutputSize: 2.46 KB
+  |      - TotalOffCpuTime: 13.508ms
+  |      - WaitTimeInTaskQueue: 0ns - 85.326us
+  |      - WorkTimes: 48
+  |    LocalExchangerV3SenderResize-30-rhs: (TotalCpuTime: 122.771us, % non-child: 0.05%)
+  |      - CpuTime: 11.459us - 16.775us
+  |      - DegreeOfParallelism: 9
+  |      - ExecTime: 2.371ms - 2.732ms
+  |      - FirstReadyWaitTime: 1.877ms - 2.229ms
+  |      - InputRows: 630
+  |      - OffCpuTime: 6.849us - 11.578us
+  |      - OpenTimes: 108
+  |      - OutputChunkSize: 1 - 24
+  |      - OutputChunks: 45
+  |      - OutputRows: 630
+  |      - OutputSize: 2.46 KB
+  |      - TotalOffCpuTime: 83.187us
+  |      - WaitTimeInTaskQueue: 0ns - 0ns
+  |      - WorkTimes: 45
+  |    JoiningTransform-30-lhs: (TotalCpuTime: 61.321ms, % non-child: 22.53%)
+  |      - CpuTime: 17.825ms - 24.691ms
+  |      - DegreeOfParallelism: 3
+  |      - ExecTime: 81.596ms - 89.417ms
+  |      - FirstReadyWaitTime: 4.753ms - 4.881ms
+  |      - InputRows: 6.001215M (6001215)
+  |      - IsEarlyTerminated: 0
+  |      - OffCpuTime: 0ns - 0ns
+  |      - OpenTimes: 1.128K (1128)
+  |      - OutputChunkSize: 6 - 29
+  |      - OutputChunks: 372
+  |      - OutputRows: 6.298K (6298)
+  |      - OutputSize: 147.61 KB
+  |      - PeakMemoryUsage: 960.00 KB
+  |      - TotalOffCpuTime: 0ns
+  |      - WaitTimeInTaskQueue: 0ns - 0ns
+  |      - WorkTimes: 375
+  |  
+  |----45: LocalExchangeStep
+  |    |  ExchangeType: REPARTITION
+  |    |  distribution properties: REPLICATE
+  |    |  
+  |    36: ExchangeStep
+  |       needMergeSorted: false
+  |       ExchangeType: BROADCAST
+  |       distribution properties: REPLICATE
+  |         SourceFromDataStream-36: (TotalCpuTime: 590.935us, % non-child: 0.22%)
+  |           - CpuTime: 49.410us - 80.137us
+  |           - DegreeOfParallelism: 9
+  |           - ExecTime: 4.062ms - 4.739ms
+  |           - FirstReadyWaitTime: 135.473us - 171.068us
+  |           - InputRows: 0
+  |           - OffCpuTime: 3.925ms - 4.621ms
+  |           - OpenTimes: 108
+  |           - OutputChunkSize: 1 - 24
+  |           - OutputChunks: 45
+  |           - OutputRows: 630
+  |           - OutputSize: 2.46 KB
+  |           - TotalOffCpuTime: 38.882ms
+  |           - WaitTimeInTaskQueue: 0ns - 0ns
+  |           - WorkTimes: 54
+  |         DataStreamRecvr-36: (TotalCpuTime: 39.903ms, % non-child: 14.66%)
+  |           - FirstBlockArrivalTime: 2025-06-14 04:13:36.422
+  |           - ApproxDataTransmitTime: 2.390ms - 2.478ms
+  |           - BytesReceived: 1.96 KB
+  |           - DataArrivalWaitTime: 39.266ms
+  |           - DegreeOfParallelism: 3
+  |           - DeserializeBlockTime: 56.798us
+  |           - FirstBlockArrivalWaitTime: 16.787ms
+  |           - NumQueues: 9
+  |           - NumSendersPerQueue: 3
+  |           - OutputChunkSize: 0 - 24
+  |           - OutputChunks: 54
+  |           - OutputRows: 630
+  |           - SendersBlockedTotalTime: 0ns
+  |    
+  44: LocalExchangeStep
+  |  ExchangeType: REPARTITION
+  |  distribution properties: RANDOM
+  |  
+  25: ReadStorageStep
+     table name: tpch_1g_db.LINEITEM
+     output schema: [tpch_1g_db.LINEITEM.L_QUANTITY:Decimal64(15,2)(non-nullable), tpch_1g_db.LINEITEM.L_EXTENDEDPRICE:Decimal64(15,2)(non-nullable), tpch_1g_db.LINEITEM.L_PARTKEY:INT(non-nullable)]
+     selectedIndexId: 7375086
+     selectedIndexName: LINEITEM
+     schemaVersion: 0
+     partitions: [7375087]
+     read latest data mode: DISABLED
+     Est. output rows: 6001215
+     Est. output size: 114 MB
+     Est. confidence: 1.00
+     partitionPruneRatio = 1/1
+     tabletPruneRatio(total stage) = 12/12
+     tabletPruneRatio(tablet pruning stage) = 12/12
+     rowsetPruneRatio(total stage) = 12/0
+     rowsetPruneRatio(rowset pruning stage) = 12/12
+     rowCountPruneRatio = 6001215/6001215
+     distribution properties: RANDOM
+       SelectProcessor-25: (TotalCpuTime: 15.114ms, % non-child: 5.55%)
+         - BfRuntimeFilterTime: 0ns - 0ns
+         - BlockLoadTime: 4.319ms - 4.457ms
+         - BlockOutputNum: 372
+         - BlockSeekNum: 372
+         - BlockSeekTime: 79.208us - 86.112us
+         - BytesReadFromAnnIndexFile: 0.00 
+         - CpuTime: 4.962ms - 5.093ms
+         - DegreeOfParallelism: 3
+         - ExecTime: 86.348ms - 94.021ms
+         - FirstReadyWaitTime: 115.301us - 132.856us
+         - GlobalDictEncodeFromLocalDictTime: 0ns - 0ns
+         - GlobalDictEncodeFromRawDataTime: 0ns - 0ns
+         - IndexAnnAppliedSegments: 0
+         - IndexAnnLoadNum: 0
+         - IndexAnnLoadTime: 0ns - 0ns
+         - IndexBitSliceAppliedSegments: 0
+         - IndexBitmapAppliedSegments: 0
+         - IndexBloomFilterAppliedSegments: 0
+         - IndexInvertedAppliedSegments: 0
+         - IndexKeyAppliedSegments: 0
+         - IndexKeyFilterTime: 0ns - 0ns
+         - IndexPredicatesFilterTime: 0ns - 0ns
+         - IndexTokenBfAppliedSegments: 0
+         - IndexZoneMapAppliedSegments: 0
+         - InputRows: 0
+         - IsEarlyTerminated: 0
+         - LateMaterializationTime: 0ns - 0ns
+         - LowCardColumnBuildTime: 0ns - 0ns
+         - LowCardColumnRecodeTime: 0ns - 0ns
+         - OffCpuTime: 0ns - 0ns
+         - OpenTimes: 750
+         - OutputChunkSize: 7.021K (7021) - 16.321K (16321)
+         - OutputChunks: 372
+         - OutputRows: 6.001215M (6001215)
+         - OutputSize: 114.46 MB
+         - PageReadFromCache: 114.47 MB
+         - PageReadFromFile: 0.00 
+         - PageReadFromFileCancelled: 0
+         - PageReadFromFileDecompressed: 0.00 
+         - PageReadParseTime: 232.358us - 257.372us
+         - PeakMemoryUsage: 1008.00 KB
+         - ReadFromFileLatency: 0ns - 0ns
+         - RowsFilteredByIndexPredicates: 0
+         - RowsFilteredByKey: 0
+         - RowsFilteredByLateMaterialization: 0
+         - RowsFilteredByRuntimeFilterIndex: 0
+         - RowsFormatOutput: 6.001215M (6001215)
+         - RowsFormatRead: 6.001215M (6001215)
+         - RuntimeFilterMaxArrivalDelay: 0ms
+         - RuntimeFiltersMissing: 0
+         - SegmentEliminatedNum: 0
+         - SegmentEliminatedNumByRuntimeFilter: 0
+         - SegmentEliminatedRows: 0
+         - SegmentEliminatedRowsByRuntimeFilter: 0
+         - SegmentJsonMaterializeCast: 0
+         - SegmentJsonMaterializeRead: 0
+         - SegmentJsonNoCompatibleData: 0
+         - SegmentJsonOnFlyExtract: 0
+         - SegmentJsonOnFlyExtractCast: 0
+         - SegmentOpenNum: 12
+         - SegmentOpenRows: 6.001215M (6001215)
+         - SegmentOpenTime: 47.648us - 58.052us
+         - SegmentReadTime: 4.635ms - 4.757ms
+         - SetRuntimeFilterTime: 0ns - 0ns
+         - TotalOffCpuTime: 0ns
+         - WaitTimeInTaskQueue: 0ns - 0ns
+         - WorkTimes: 375
+
+PLAN FRAGMENT ID 2
+Fragment 2: (TotalCpuTime: 11.354ms, % non-child: 0.00%)
+  - DegreeOfParallelism-29: 3
+  - ExecTime: 3.257ms - 3.678ms
+  - MemoryLimit: 6.00 TB
+  - PeakMemoryUsage: 49.38 KB
+  FRAGMENT DISTRIBUTION: MURMUR_HASH on [tpch_1g_db.PART.P_PARTKEY] with 12 buckets
+  DATA SINK: DS DATA EXCHANGE
+    DEST. EXCHANGE ID: 36
+    OUTPUT DISTRIBUTION: REPLICATE
+    DataStreamSender: (TotalCpuTime: 1.270ms, % non-child: 11.19%)
+      - FirstBlockSendTime: 2025-06-14 04:13:36.422
+      - BytesSent: 1.96 KB
+      - CloseWaitTime: 693.192us
+      - IndexBlockTime: 0ns
+      - MergeBlockTime: 0ns
+      - OutputChunkSize: 1 - 24
+      - OutputChunks: 15
+      - OutputRows: 210
+      - OverallThroughput: 13.888904571533203 MB/sec
+      - SendStallTime: 199.847us
+      - SerializeBlockTime: 18.474us
+      - SplitBlockTime: 0ns
+  QueryPipeline: (TotalCpuTime: 10.568ms, % non-child: 12.02%)
+
+  29: ReadStorageStep
+     table name: tpch_1g_db.PART
+     output schema: [tpch_1g_db.PART.P_PARTKEY:INT(non-nullable)]
+     selectedIndexId: 7375011
+     selectedIndexName: PART
+     schemaVersion: 0
+     partitions: [7375012]
+     read latest data mode: DISABLED
+     predicates: 
+       Index: [equals(tpch_1g_db.PART.P_BRAND, 'Brand#12'), equals(tpch_1g_db.PART.P_CONTAINER, 'SM BAG')]
+     Est. output rows: 200000
+     Est. output size: 781 KB
+     Est. confidence: 0.50
+     partitionPruneRatio = 1/1
+     tabletPruneRatio(total stage) = 12/12
+     tabletPruneRatio(tablet pruning stage) = 12/12
+     rowsetPruneRatio(total stage) = 12/0
+     rowsetPruneRatio(rowset pruning stage) = 12/12
+     rowCountPruneRatio = 200000/200000
+     distribution properties: MURMUR_HASH on [tpch_1g_db.PART.P_PARTKEY] with 12 buckets
+       SelectProcessor-29: (TotalCpuTime: 9.203ms, % non-child: 81.05%)
+         - BfRuntimeFilterTime: 0ns - 0ns
+         - BlockLoadTime: 1.729ms - 2.146ms
+         - BlockOutputNum: 24
+         - BlockSeekNum: 233
+         - BlockSeekTime: 84.731us - 104.667us
+         - BytesReadFromAnnIndexFile: 0.00 
+         - CpuTime: 2.897ms - 3.304ms
+         - DegreeOfParallelism: 3
+         - ExecTime: 3.043ms - 3.440ms
+         - FirstReadyWaitTime: 65.598us - 75.213us
+         - GlobalDictEncodeFromLocalDictTime: 0ns - 0ns
+         - GlobalDictEncodeFromRawDataTime: 0ns - 0ns
+         - IndexAnnAppliedSegments: 0
+         - IndexAnnLoadNum: 0
+         - IndexAnnLoadTime: 0ns - 0ns
+         - IndexBitSliceAppliedSegments: 0
+         - IndexBitmapAppliedSegments: 0
+         - IndexBloomFilterAppliedSegments: 0
+         - IndexInvertedAppliedSegments: 0
+         - IndexKeyAppliedSegments: 0
+         - IndexKeyFilterTime: 0ns - 0ns
+         - IndexPredicatesFilterTime: 19.057us - 23.651us
+         - IndexTokenBfAppliedSegments: 0
+         - IndexZoneMapAppliedSegments: 12
+         - InputRows: 0
+         - IsEarlyTerminated: 0
+         - LateMaterializationTime: 686.491us - 709.999us
+         - LowCardColumnBuildTime: 0ns - 0ns
+         - LowCardColumnRecodeTime: 0ns - 0ns
+         - OffCpuTime: 0ns - 0ns
+         - OpenTimes: 36
+         - OutputChunkSize: 1 - 24
+         - OutputChunks: 15
+         - OutputRows: 210
+         - OutputSize: 840.00 B
+         - PageReadFromCache: 2.29 MB
+         - PageReadFromFile: 0.00 
+         - PageReadFromFileCancelled: 0
+         - PageReadFromFileDecompressed: 0.00 
+         - PageReadParseTime: 75.872us - 94.508us
+         - PeakMemoryUsage: 96.75 KB
+         - ReadFromFileLatency: 0ns - 0ns
+         - RowsFilteredByIndexPredicates: 0
+         - RowsFilteredByKey: 0
+         - RowsFilteredByLateMaterialization: 199.79K (199790)
+         - RowsFilteredByRuntimeFilterIndex: 0
+         - RowsFormatOutput: 210
+         - RowsFormatRead: 200.0K (200000)
+         - RuntimeFilterMaxArrivalDelay: 0ms
+         - RuntimeFiltersMissing: 0
+         - SegmentEliminatedNum: 0
+         - SegmentEliminatedNumByRuntimeFilter: 0
+         - SegmentEliminatedRows: 0
+         - SegmentEliminatedRowsByRuntimeFilter: 0
+         - SegmentJsonMaterializeCast: 0
+         - SegmentJsonMaterializeRead: 0
+         - SegmentJsonNoCompatibleData: 0
+         - SegmentJsonOnFlyExtract: 0
+         - SegmentJsonOnFlyExtractCast: 0
+         - SegmentOpenNum: 12
+         - SegmentOpenRows: 200.0K (200000)
+         - SegmentOpenTime: 148.753us - 169.006us
+         - SegmentReadTime: 2.602ms - 3.044ms
+         - SetRuntimeFilterTime: 0ns - 0ns
+         - TotalOffCpuTime: 0ns
+         - WaitTimeInTaskQueue: 0ns - 0ns
+         - WorkTimes: 18
+
+PLAN FRAGMENT ID 3
+Fragment 3: (TotalCpuTime: 158.476ms, % non-child: 0.00%)
+  - ExecTime: 51.149ms - 52.754ms
+  - MemoryLimit: 6.00 TB
+  - PeakMemoryUsage: 23.98 MB
+  FRAGMENT DISTRIBUTION: MURMUR_HASH on [$a$1.tpch_1g_db.LINEITEM.L_PARTKEY] with 3 buckets
+  DATA SINK: DS DATA EXCHANGE
+    DEST. EXCHANGE ID: 40
+    OUTPUT DISTRIBUTION: REPLICATE
+    DataStreamSender: (TotalCpuTime: 3.095ms, % non-child: 1.95%)
+      - FirstBlockSendTime: 2025-06-14 04:13:36.468
+      - BytesSent: 7.63 MB
+      - CloseWaitTime: 1.689ms
+      - IndexBlockTime: 0ns
+      - MergeBlockTime: 0ns
+      - OutputChunkSize: 985 - 16.321K (16321)
+      - OutputChunks: 15
+      - OutputRows: 200.0K (200000)
+      - OverallThroughput: 22.117727695964277 GB/sec
+      - SendStallTime: 241.370us
+      - SerializeBlockTime: 781.509us
+      - SplitBlockTime: 0ns
+  QueryPipeline: (TotalCpuTime: 290.418ms, % non-child: 92.50%)
+
+  31: ProjectStep
+  |  expr list: 
+  |    0: $a$1.multiply(0.2, $a$1.avg($a$1.tpch_1g_db.LINEITEM.L_QUANTITY)):Decimal128(20,7)(non-nullable) -> $a$1.multiply(0.2, $a$1.avg($a$1.tpch_1g_db.LINEITEM.L_QUANTITY)):Decimal128(20,7)(non-nullable), 
+  |    1: $a$1.tpch_1g_db.LINEITEM.L_PARTKEY:INT(non-nullable) -> $a$1.tpch_1g_db.LINEITEM.L_PARTKEY:INT(non-nullable)
+  |  distribution properties: MURMUR_HASH on [$a$1.tpch_1g_db.LINEITEM.L_PARTKEY] with 3 buckets
+  |    ExpressionTransform-31: (TotalCpuTime: 779.854us, % non-child: 0.49%)
+  |      - CpuTime: 195.510us - 359.566us
+  |      - DegreeOfParallelism: 3
+  |      - ExecTime: 3.894ms - 6.231ms
+  |      - FirstReadyWaitTime: 45.862ms - 47.013ms
+  |      - InputRows: 200.0K (200000)
+  |      - OffCpuTime: 0ns - 0ns
+  |      - OpenTimes: 51
+  |      - OutputChunkSize: 985 - 16.321K (16321)
+  |      - OutputChunks: 15
+  |      - OutputRows: 200.0K (200000)
+  |      - OutputSize: 3.81 MB
+  |      - PeakMemoryUsage: 960.00 KB
+  |      - TotalOffCpuTime: 0ns
+  |      - WaitTimeInTaskQueue: 0ns - 0ns
+  |      - WorkTimes: 15
+  |  
+  39: MergingAggregatedStep
+  |  grouping keys: [$a$1.tpch_1g_db.LINEITEM.L_PARTKEY]
+  |  agg calls: [$a$1.avg($a$1.avg($a$1.tpch_1g_db.LINEITEM.L_QUANTITY)-state)->$a$1.avg($a$1.tpch_1g_db.LINEITEM.L_QUANTITY)]
+  |  needs finalize = true
+  |  Est. output rows: 6001215
+  |  Est. output size: 114 MB
+  |  Est. confidence: 0.27
+  |  Agg Exec Type: PARTIAL_WITH_AUTO_STREAMING
+  |  hints used:
+  |    agg_exec_type = PARTIAL_WITH_AUTO_STREAMING
+  |    agg_distribution_type = AUTO
+  |  distribution properties: MURMUR_HASH on [$a$1.tpch_1g_db.LINEITEM.L_PARTKEY] with 3 buckets
+  |    Converting-39: (TotalCpuTime: 206.519us, % non-child: 0.13%)
+  |      - CpuTime: 59.000us - 78.648us
+  |      - DegreeOfParallelism: 3
+  |      - ExecTime: 3.915ms - 6.259ms
+  |      - FirstReadyWaitTime: 45.828ms - 46.987ms
+  |      - InputRows: 200.0K (200000)
+  |      - OffCpuTime: 0ns - 0ns
+  |      - OpenTimes: 51
+  |      - OutputChunkSize: 985 - 16.321K (16321)
+  |      - OutputChunks: 15
+  |      - OutputRows: 200.0K (200000)
+  |      - OutputSize: 3.81 MB
+  |      - PeakMemoryUsage: 1008.00 KB
+  |      - TotalOffCpuTime: 0ns
+  |      - WaitTimeInTaskQueue: 0ns - 0ns
+  |      - WorkTimes: 15
+  |    MergingAggregatedTransform-39: (TotalCpuTime: 137.943ms, % non-child: 87.04%)
+  |      - CpuTime: 45.251ms - 46.853ms
+  |      - DegreeOfParallelism: 3
+  |      - ExecTime: 47.083ms - 48.806ms
+  |      - FirstReadyWaitTime: 3.691ms - 3.988ms
+  |      - InputRows: 5.999255M (5999255)
+  |      - OffCpuTime: 0ns - 0ns
+  |      - OpenTimes: 680
+  |      - OutputChunkSize: 985 - 16.321K (16321)
+  |      - OutputChunks: 15
+  |      - OutputRows: 200.0K (200000)
+  |      - OutputSize: 4.01 MB
+  |      - PeakMemoryUsage: 26.72 MB
+  |      - SpilledFilesNum: 0
+  |      - TotalOffCpuTime: 0ns
+  |      - WaitTimeInTaskQueue: 0ns - 2.473ms
+  |      - WorkTimes: 346
+  |  
+  46: LocalExchangeStep
+  |  ExchangeType: MERGE
+  |  distribution properties: MURMUR_HASH on [$a$1.tpch_1g_db.LINEITEM.L_PARTKEY] with 3 buckets
+  |    LocalExchangerV3ReceiverResize-46: (TotalCpuTime: 544.113us, % non-child: 0.34%)
+  |      - CpuTime: 148.863us - 214.981us
+  |      - DegreeOfParallelism: 3
+  |      - ExecTime: 44.396ms - 45.319ms
+  |      - FirstReadyWaitTime: 68.128us - 79.587us
+  |      - InputRows: 0
+  |      - OffCpuTime: 4.200ms - 4.807ms
+  |      - OpenTimes: 662
+  |      - OutputChunkSize: 2.393K (2393) - 21.909K (21909)
+  |      - OutputChunks: 328
+  |      - OutputRows: 5.999255M (5999255)
+  |      - OutputSize: 70.09 MB
+  |      - TotalOffCpuTime: 13.411ms
+  |      - WaitTimeInTaskQueue: 0ns - 0ns
+  |      - WorkTimes: 331
+  |    LocalExchangerV3SenderResize-46: (TotalCpuTime: 487.717us, % non-child: 0.31%)
+  |      - CpuTime: 141.650us - 181.428us
+  |      - DegreeOfParallelism: 3
+  |      - ExecTime: 40.179ms - 40.817ms
+  |      - FirstReadyWaitTime: 3.659ms - 3.951ms
+  |      - InputRows: 5.999255M (5999255)
+  |      - OffCpuTime: 8.780us - 19.535us
+  |      - OpenTimes: 662
+  |      - OutputChunkSize: 2.393K (2393) - 21.909K (21909)
+  |      - OutputChunks: 328
+  |      - OutputRows: 5.999255M (5999255)
+  |      - OutputSize: 70.09 MB
+  |      - TotalOffCpuTime: 44.892us
+  |      - WaitTimeInTaskQueue: 0ns - 0ns
+  |      - WorkTimes: 328
+  |  
+  38: ExchangeStep
+     needMergeSorted: false
+     ExchangeType: REPARTITION
+     distribution properties: MURMUR_HASH on [$a$1.tpch_1g_db.LINEITEM.L_PARTKEY] with 3 buckets
+       SourceFromDataStream-38: (TotalCpuTime: 3.873ms, % non-child: 2.44%)
+         - CpuTime: 1.200ms - 1.430ms
+         - DegreeOfParallelism: 3
+         - ExecTime: 44.070ms - 44.526ms
+         - FirstReadyWaitTime: 53.851us - 68.787us
+         - InputRows: 0
+         - OffCpuTime: 42.405ms - 42.714ms
+         - OpenTimes: 662
+         - OutputChunkSize: 2.393K (2393) - 21.909K (21909)
+         - OutputChunks: 328
+         - OutputRows: 5.999255M (5999255)
+         - OutputSize: 70.09 MB
+         - TotalOffCpuTime: 127.727ms
+         - WaitTimeInTaskQueue: 0ns - 0ns
+         - WorkTimes: 331
+       DataStreamRecvr-38: (TotalCpuTime: 146.761ms, % non-child: 92.61%)
+         - FirstBlockArrivalTime: 2025-06-14 04:13:36.426
+         - ApproxDataTransmitTime: 40.189ms - 40.838ms
+         - BytesReceived: 46.09 MB
+         - DataArrivalWaitTime: 130.452ms
+         - DegreeOfParallelism: 3
+         - DeserializeBlockTime: 5.982ms
+         - FirstBlockArrivalWaitTime: 11.125ms
+         - NumQueues: 3
+         - NumSendersPerQueue: 9
+         - OutputChunkSize: 0 - 21.909K (21909)
+         - OutputChunks: 331
+         - OutputRows: 5.999255M (5999255)
+         - SendersBlockedTotalTime: 0ns
+
+PLAN FRAGMENT ID 4
+Fragment 4: (TotalCpuTime: 130.983ms, % non-child: 0.00%)
+  - DegreeOfParallelism-27: 3
+  - ExecTime: 41.890ms - 42.587ms
+  - MemoryLimit: 6.00 TB
+  - PeakMemoryUsage: 6.57 MB
+  FRAGMENT DISTRIBUTION: RANDOM
+  DATA SINK: DS DATA EXCHANGE
+    DEST. EXCHANGE ID: 38
+    OUTPUT DISTRIBUTION: MURMUR_HASH on [$a$1.tpch_1g_db.LINEITEM.L_PARTKEY] with 3 buckets
+    DataStreamSender: (TotalCpuTime: 112.156ms, % non-child: 85.63%)
+      - FirstBlockSendTime: 2025-06-14 04:13:36.424
+      - BytesSent: 46.09 MB
+      - CloseWaitTime: 1.782ms
+      - IndexBlockTime: 73.312ms
+      - MergeBlockTime: 23.302ms
+      - OutputChunkSize: 7.021K (7021) - 16.321K (16321)
+      - OutputChunks: 372
+      - OutputRows: 5.999255M (5999255)
+      - OverallThroughput: 3.611588423140347 GB/sec
+      - SendStallTime: 1.639ms
+      - SerializeBlockTime: 9.470ms
+      - SplitBlockTime: 0ns
+  QueryPipeline: (TotalCpuTime: 130.153ms, % non-child: 87.22%)
+
+  37: PartialAggregatingStep
+  |  grouping keys: [$a$1.tpch_1g_db.LINEITEM.L_PARTKEY]
+  |  agg calls: [$a$1.avg($a$1.tpch_1g_db.LINEITEM.L_QUANTITY)->$a$1.avg($a$1.tpch_1g_db.LINEITEM.L_QUANTITY)-state]
+  |  needs finalize = false
+  |  Est. output rows: 6001215
+  |  Est. output size: 114 MB
+  |  Est. confidence: 0.30
+  |  Agg Exec Type: PARTIAL_WITH_AUTO_STREAMING
+  |  hints used:
+  |    agg_exec_type = PARTIAL_WITH_AUTO_STREAMING
+  |    agg_distribution_type = AUTO
+  |  distribution properties: RANDOM
+  |    AggregatingTransform-37: (TotalCpuTime: 3.991ms, % non-child: 3.05%)
+  |      - CpuTime: 1.297ms - 1.390ms
+  |      - DegreeOfParallelism: 3
+  |      - ExecTime: 41.584ms - 42.288ms
+  |      - FirstReadyWaitTime: 132.147us - 144.093us
+  |      - InputRows: 6.001215M (6001215)
+  |      - IsSwitchedToStreamingAgg: 3
+  |      - OffCpuTime: 0ns - 0ns
+  |      - OpenTimes: 759
+  |      - OutputChunkSize: 7.021K (7021) - 16.321K (16321)
+  |      - OutputChunks: 372
+  |      - OutputRows: 5.999255M (5999255)
+  |      - OutputSize: 68.66 MB
+  |      - PeakMemoryUsage: 6.54 MB
+  |      - SpilledFilesNum: 0
+  |      - TotalOffCpuTime: 0ns
+  |      - WaitTimeInTaskQueue: 0ns - 11.816ms
+  |      - WorkTimes: 375
+  |  
+  27: ReadStorageStep
+     table name: tpch_1g_db.LINEITEM
+     output schema: [$a$1.tpch_1g_db.LINEITEM.L_QUANTITY:Decimal64(15,2)(non-nullable), $a$1.tpch_1g_db.LINEITEM.L_PARTKEY:INT(non-nullable)]
+     selectedIndexId: 7375086
+     selectedIndexName: LINEITEM
+     schemaVersion: 0
+     partitions: [7375087]
+     read latest data mode: DISABLED
+     Est. output rows: 6001215
+     Est. output size: 68 MB
+     Est. confidence: 1.00
+     partitionPruneRatio = 1/1
+     tabletPruneRatio(total stage) = 12/12
+     tabletPruneRatio(tablet pruning stage) = 12/12
+     rowsetPruneRatio(total stage) = 12/0
+     rowsetPruneRatio(rowset pruning stage) = 12/12
+     rowCountPruneRatio = 6001215/6001215
+     distribution properties: RANDOM
+       SelectProcessor-27: (TotalCpuTime: 11.922ms, % non-child: 9.10%)
+         - BfRuntimeFilterTime: 0ns - 0ns
+         - BlockLoadTime: 3.116ms - 3.272ms
+         - BlockOutputNum: 372
+         - BlockSeekNum: 372
+         - BlockSeekTime: 81.037us - 95.350us
+         - BytesReadFromAnnIndexFile: 0.00 
+         - CpuTime: 3.901ms - 4.071ms
+         - DegreeOfParallelism: 3
+         - ExecTime: 41.410ms - 42.196ms
+         - FirstReadyWaitTime: 64.812us - 66.753us
+         - GlobalDictEncodeFromLocalDictTime: 0ns - 0ns
+         - GlobalDictEncodeFromRawDataTime: 0ns - 0ns
+         - IndexAnnAppliedSegments: 0
+         - IndexAnnLoadNum: 0
+         - IndexAnnLoadTime: 0ns - 0ns
+         - IndexBitSliceAppliedSegments: 0
+         - IndexBitmapAppliedSegments: 0
+         - IndexBloomFilterAppliedSegments: 0
+         - IndexInvertedAppliedSegments: 0
+         - IndexKeyAppliedSegments: 0
+         - IndexKeyFilterTime: 0ns - 0ns
+         - IndexPredicatesFilterTime: 0ns - 0ns
+         - IndexTokenBfAppliedSegments: 0
+         - IndexZoneMapAppliedSegments: 0
+         - InputRows: 0
+         - IsEarlyTerminated: 0
+         - LateMaterializationTime: 0ns - 0ns
+         - LowCardColumnBuildTime: 0ns - 0ns
+         - LowCardColumnRecodeTime: 0ns - 0ns
+         - OffCpuTime: 0ns - 0ns
+         - OpenTimes: 750
+         - OutputChunkSize: 7.021K (7021) - 16.321K (16321)
+         - OutputChunks: 372
+         - OutputRows: 6.001215M (6001215)
+         - OutputSize: 68.68 MB
+         - PageReadFromCache: 68.68 MB
+         - PageReadFromFile: 0.00 
+         - PageReadFromFileCancelled: 0
+         - PageReadFromFileDecompressed: 0.00 
+         - PageReadParseTime: 171.016us - 190.568us
+         - PeakMemoryUsage: 612.00 KB
+         - ReadFromFileLatency: 0ns - 0ns
+         - RowsFilteredByIndexPredicates: 0
+         - RowsFilteredByKey: 0
+         - RowsFilteredByLateMaterialization: 0
+         - RowsFilteredByRuntimeFilterIndex: 0
+         - RowsFormatOutput: 6.001215M (6001215)
+         - RowsFormatRead: 6.001215M (6001215)
+         - RuntimeFilterMaxArrivalDelay: 0ms
+         - RuntimeFiltersMissing: 0
+         - SegmentEliminatedNum: 0
+         - SegmentEliminatedNumByRuntimeFilter: 0
+         - SegmentEliminatedRows: 0
+         - SegmentEliminatedRowsByRuntimeFilter: 0
+         - SegmentJsonMaterializeCast: 0
+         - SegmentJsonMaterializeRead: 0
+         - SegmentJsonNoCompatibleData: 0
+         - SegmentJsonOnFlyExtract: 0
+         - SegmentJsonOnFlyExtractCast: 0
+         - SegmentOpenNum: 12
+         - SegmentOpenRows: 6.001215M (6001215)
+         - SegmentOpenTime: 30.094us - 55.977us
+         - SegmentReadTime: 3.531ms - 3.684ms
+         - SetRuntimeFilterTime: 0ns - 0ns
+         - TotalOffCpuTime: 0ns
+         - WaitTimeInTaskQueue: 0ns - 0ns
+         - WorkTimes: 375
+

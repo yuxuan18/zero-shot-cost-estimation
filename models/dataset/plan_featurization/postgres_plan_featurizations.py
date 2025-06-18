@@ -22,3 +22,10 @@ class PostgresDeepDBEstSystemCardDetail:
     COLUMN_FEATURES = ['avg_width', 'correlation', 'data_type', 'n_distinct', 'null_frac']
     OUTPUT_COLUMN_FEATURES = ['aggregation']
     TABLE_FEATURES = ['reltuples', 'relpages']
+
+class KryptonEstSystemCardDetail:
+    PLAN_FEATURES = ['est_card', 'op_name', 'est_children_card']
+    FILTER_FEATURES = ['operator', 'literal_feature']
+    COLUMN_FEATURES = ['data_type']
+    OUTPUT_COLUMN_FEATURES = ['aggregation']
+    TABLE_FEATURES = ['reltuples']

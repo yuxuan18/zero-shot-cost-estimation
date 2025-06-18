@@ -1,5 +1,6 @@
 import functools
 from json import JSONDecodeError
+import math
 
 import numpy as np
 from sklearn import preprocessing
@@ -74,7 +75,8 @@ def create_datasets(workload_run_paths, cap_training_samples=None, val_ratio=0.1
         val_dataset = PlanDataset([plans[i] for i in val_idxs], val_idxs)
 
     # derive label normalization
-    runtimes = np.array([p.plan_runtime / 1000 for p in plans])
+    # runtimes = np.array([p.plan_runtime / 1000 for p in plans])
+    runtimes = np.array([math.log(p.plan_card) for p in plans])
     label_norm = derive_label_normalizer(loss_class_name, runtimes)
 
     return label_norm, train_dataset, val_dataset, database_statistics
