@@ -75,9 +75,10 @@ def create_datasets(workload_run_paths, cap_training_samples=None, val_ratio=0.1
         val_dataset = PlanDataset([plans[i] for i in val_idxs], val_idxs)
 
     # derive label normalization
-    # runtimes = np.array([p.plan_runtime / 1000 for p in plans])
-    runtimes = np.array([math.log(p.plan_card) for p in plans])
+    runtimes = np.array([p.plan_runtime for p in plans])
+    # runtimes = np.array([math.log(p.plan_card) for p in plans])
     label_norm = derive_label_normalizer(loss_class_name, runtimes)
+    # label_norm = None
 
     return label_norm, train_dataset, val_dataset, database_statistics
 
@@ -88,9 +89,11 @@ def derive_label_normalizer(loss_class_name, y):
         scale_transformer = preprocessing.MinMaxScaler()
         pipeline = Pipeline([("log", log_transformer), ("scale", scale_transformer)])
         pipeline.fit(y.reshape(-1, 1))
-    elif loss_class_name == 'QLoss':
-        scale_transformer = preprocessing.MinMaxScaler(feature_range=(1e-2, 1))
-        pipeline = Pipeline([("scale", scale_transformer)])
+    elif loss_class_name == 'QLoss':        
+        log_transformer = preprocessing.FunctionTransformer(np.log1p, _inv_log1p, validate=True)
+        # scale_transformer = preprocessing.MinMaxScaler(feature_range=(1e-2, 1))
+        # pipeline = Pipeline([("scale", scale_transformer)])
+        pipeline = Pipeline([("log", log_transformer)])
         pipeline.fit(y.reshape(-1, 1))
     else:
         pipeline = None
@@ -126,10 +129,12 @@ def create_dataloader(workload_run_paths, test_workload_run_paths, statistics_fi
     train_collate_fn = functools.partial(plan_collator, db_statistics=database_statistics,
                                          feature_statistics=feature_statistics,
                                          plan_featurization_name=plan_featurization_name)
-    dataloader_args = dict(batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, collate_fn=train_collate_fn,
+    train_dataloader_args = dict(batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, collate_fn=train_collate_fn,
                            pin_memory=pin_memory)
-    train_loader = DataLoader(train_dataset, **dataloader_args)
-    val_loader = DataLoader(val_dataset, **dataloader_args)
+    test_dataloader_args = dict(batch_size=batch_size, shuffle=False, num_workers=num_workers, collate_fn=train_collate_fn, 
+                                pin_memory=pin_memory)
+    train_loader = DataLoader(train_dataset, **train_dataloader_args)
+    val_loader = DataLoader(val_dataset, **test_dataloader_args)
 
     # for each test workoad run create a distinct test loader
     test_loaders = None
@@ -143,8 +148,8 @@ def create_dataloader(workload_run_paths, test_workload_run_paths, statistics_fi
                                                 feature_statistics=feature_statistics,
                                                 plan_featurization_name=plan_featurization_name)
             # previously shuffle=False but this resulted in bugs
-            dataloader_args.update(collate_fn=test_collate_fn)
-            test_loader = DataLoader(test_dataset, **dataloader_args)
+            test_dataloader_args.update(collate_fn=test_collate_fn)
+            test_loader = DataLoader(test_dataset, **test_dataloader_args)
             test_loaders.append(test_loader)
 
     return label_norm, feature_statistics, train_loader, val_loader, test_loaders

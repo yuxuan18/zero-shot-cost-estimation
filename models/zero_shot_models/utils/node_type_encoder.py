@@ -15,7 +15,7 @@ class NodeTypeEncoder(FcOutModel):
     def __init__(self, features, feature_statistics, max_emb_dim=32, drop_whole_embeddings=False,
                  one_hot_embeddings=True, **kwargs):
         
-        print(features)
+        # print(features)
 
         for f in features:
             if f not in feature_statistics:
@@ -57,7 +57,7 @@ class NodeTypeEncoder(FcOutModel):
         if self.no_input_required:
             return self.replacement_param.repeat(input.shape[0], 1)
 
-        assert input.shape[1] == self.input_feature_idx
+        assert input.shape[1] == self.input_feature_idx, f"Expected input with {self.input_feature_idx} features, got {input.shape[1]}"
         encoded_input = []
         for feat, feat_type, feat_idxs in zip(self.features, self.feature_types, self.feature_idxs):
             feat_data = input[:, feat_idxs]
@@ -66,6 +66,8 @@ class NodeTypeEncoder(FcOutModel):
                 encoded_input.append(feat_data)
             elif feat_type == FeatureType.categorical:
                 feat_data = torch.reshape(feat_data, (-1,))
+                # print(f"embedding for {feat} with {feat_data}")
+                # print(f"embedding shape: {self.embeddings[feat].emb_dim}")
                 embd_data = self.embeddings[feat](feat_data.long())
                 encoded_input.append(embd_data)
             else:

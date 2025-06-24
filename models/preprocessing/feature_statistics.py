@@ -7,6 +7,36 @@ import numpy as np
 from sklearn.preprocessing import RobustScaler
 from tqdm import tqdm
 
+import datetime
+
+def literal_to_float(literal: dict):
+    if isinstance(literal, dict):
+        r_type, r_literal = literal["type"], literal["literal"]
+    else:
+        r_type = literal.type
+        r_literal = literal.literal
+    if r_type in ["string" or "string_like"]:
+        v = len(r_literal)
+    elif r_type == "datetime":
+        if "." in r_literal:
+            # e.g., "2023-10-01 12:00:00.123456"
+            v = (datetime.datetime.strptime(r_literal, "%Y-%m-%d %H:%M:%S.%f") - datetime.datetime(1970, 1, 1)).total_seconds()
+        elif ":" in r_literal:
+            # e.g., "2023-10-01 12:00:00"
+            v = (datetime.datetime.strptime(r_literal, "%Y-%m-%d %H:%M:%S") - datetime.datetime(1970, 1, 1)).total_seconds()
+        else:
+            v = (datetime.datetime.strptime(r_literal, "%Y-%m-%d") - datetime.datetime(1970, 1, 1)).total_seconds()
+    elif r_type == "set":
+        v = len(r_literal.split(','))
+    elif r_type == "column":
+        v = 0
+    elif r_type is None:
+        v = 0
+    else:
+        raise ValueError(f"Unknown r_literal type: {r_type}")
+    
+    return v
+
 
 def gather_values_recursively(json_dict, value_dict=None):
     if value_dict is None:
@@ -14,7 +44,10 @@ def gather_values_recursively(json_dict, value_dict=None):
 
     if isinstance(json_dict, dict):
         for k, v in json_dict.items():
-            if not (isinstance(v, list) or isinstance(v, tuple) or isinstance(v, dict)):
+            if k == "r_literal":
+                v = literal_to_float(v)
+                value_dict[k].append(v)
+            elif not (isinstance(v, list) or isinstance(v, tuple) or isinstance(v, dict)):
                 value_dict[k].append(v)
             elif (isinstance(v, list) or isinstance(v, tuple)) and len(v) > 0 and \
                     (isinstance(v[0], int) or isinstance(v[0], float) or isinstance(v[0], str)):

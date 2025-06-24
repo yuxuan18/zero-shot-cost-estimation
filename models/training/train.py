@@ -51,7 +51,7 @@ def train_epoch(epoch_stats, train_loader, model, optimizer, max_epoch_tuples, c
 
 
 def validate_model(val_loader, model, epoch=0, epoch_stats=None, metrics=None, max_epoch_tuples=None,
-                   custom_batch_to=batch_to, verbose=False, log_all_queries=False):
+                   custom_batch_to=batch_to, verbose=True, log_all_queries=False):
     model.eval()
 
     with torch.autograd.no_grad():
@@ -68,11 +68,15 @@ def validate_model(val_loader, model, epoch=0, epoch_stats=None, metrics=None, m
             if max_epoch_tuples is not None and batch_idx * val_loader.batch_size > max_epoch_tuples:
                 break
 
-            val_num_tuples += val_loader.batch_size
+            try:
+                val_num_tuples += val_loader.batch_size
 
-            input_model, label, sample_idxs_batch = custom_batch_to(batch, model.device, model.label_norm)
-            sample_idxs += sample_idxs_batch
-            output = model(input_model)
+                input_model, label, sample_idxs_batch = custom_batch_to(batch, model.device, model.label_norm)
+                sample_idxs += sample_idxs_batch
+                output = model(input_model)
+            except Exception as e:
+                print(f"Error during validation for batch {batch_idx} in epoch {epoch}: {e}")
+                continue
 
             # sum up mean batch losses
             val_loss += model.loss_fxn(output, label).cpu()
@@ -84,6 +88,14 @@ def validate_model(val_loader, model, epoch=0, epoch_stats=None, metrics=None, m
                 curr_pred = model.label_norm.inverse_transform(curr_pred)
                 curr_label = model.label_norm.inverse_transform(curr_label.reshape(-1, 1))
                 curr_label = curr_label.reshape(-1)
+
+            if np.isinf(curr_pred.reshape(-1)[0]):
+                print(f"Warning: prediction is inf for batch {batch_idx} in epoch {epoch}. Skipping this batch.")
+                continue
+
+            if curr_label.reshape(-1)[0] == 0:
+                print(f"Warning: label is zero for batch {batch_idx} in epoch {epoch}. Skipping this batch.")
+                continue
 
             preds.append(curr_pred.reshape(-1))
             labels.append(curr_label.reshape(-1))
@@ -100,6 +112,9 @@ def validate_model(val_loader, model, epoch=0, epoch_stats=None, metrics=None, m
         if verbose:
             print(f'labels: {labels}')
             print(f'preds: {preds}')
+            with open("results.csv", "w") as f:
+                for l, p in zip(labels, preds):
+                    f.write(f"{l},{p}\n")
         epoch_stats.update(val_std=np.std(labels))
         if log_all_queries:
             epoch_stats.update(val_labels=[float(f) for f in labels])
@@ -168,9 +183,9 @@ def train_model(workload_runs,
             test_workload = os.path.basename(p).replace('.json', '')
             target_test_csv_paths.append(os.path.join(target_dir, f'test_{filename_model}_{test_workload}.csv'))
 
-    if len(target_test_csv_paths) > 0 and all([os.path.exists(p) for p in target_test_csv_paths]):
-        print(f"Model was already trained and tested ({target_test_csv_paths} exists)")
-        return
+    # if len(target_test_csv_paths) > 0 and all([os.path.exists(p) for p in target_test_csv_paths]):
+    #     print(f"Model was already trained and tested ({target_test_csv_paths} exists)")
+    #     return
 
     # create a dataset
     loss_class_name = final_mlp_kwargs['loss_class_name']

@@ -71,7 +71,7 @@ class MAPE(Metric):
 
 
 class QError(Metric):
-    def __init__(self, percentile=50, min_val=0.1, **kwargs):
+    def __init__(self, percentile=50, min_val=5e-4, **kwargs):
         super().__init__(metric_name=f'median_q_error_{percentile}', maximize=False, **kwargs)
         self.percentile = percentile
         self.min_val = min_val
@@ -80,7 +80,7 @@ class QError(Metric):
         if not np.all(labels >= self.min_val):
             print("WARNING: some labels are smaller than min_val")
         preds = np.abs(preds)
-        # preds = np.clip(preds, self.min_val, np.inf)
+        preds = np.clip(preds, self.min_val, np.inf)
 
         q_errors = np.maximum(labels / preds, preds / labels)
         q_errors = np.nan_to_num(q_errors, nan=np.inf)

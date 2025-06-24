@@ -22,7 +22,7 @@ def recursive_to(iterable, device):
 
 
 def batch_to(batch, device, label_norm):
-    graph, features, label, sample_idxs = batch
+    graph, features, label, sample_idxs, plan_idx_to_type = batch
 
     # normalize the labels for training
     if label_norm is not None:
@@ -34,7 +34,7 @@ def batch_to(batch, device, label_norm):
     recursive_to(label, device)
     # recursive_to(graph, device)
     graph = graph.to(device)
-    return (graph, features), label, sample_idxs
+    return (plan_idx_to_type, graph, features), label, sample_idxs
 
 
 def flatten_dict(d, parent_key='', sep='_'):

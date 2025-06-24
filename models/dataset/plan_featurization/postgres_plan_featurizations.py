@@ -17,15 +17,36 @@ class PostgresEstSystemCardDetail:
 
 
 class PostgresDeepDBEstSystemCardDetail:
-    PLAN_FEATURES = ['dd_est_card', 'est_width', 'workers_planned', 'op_name', 'dd_est_children_card']
+    PLAN_FEATURES = ['est_card', 'est_width', 'workers_planned', 'op_name', 'est_children_card']
     FILTER_FEATURES = ['operator', 'literal_feature']
     COLUMN_FEATURES = ['avg_width', 'correlation', 'data_type', 'n_distinct', 'null_frac']
     OUTPUT_COLUMN_FEATURES = ['aggregation']
     TABLE_FEATURES = ['reltuples', 'relpages']
 
 class KryptonEstSystemCardDetail:
-    PLAN_FEATURES = ['est_card', 'op_name', 'est_children_card']
+    PLAN_FEATURES = ['est_card', 'op_name']
     FILTER_FEATURES = ['operator', 'literal_feature']
     COLUMN_FEATURES = ['data_type']
     OUTPUT_COLUMN_FEATURES = ['aggregation']
     TABLE_FEATURES = ['reltuples']
+
+class KryptonCardDetail:
+    PLAN_FEATURES = ['op_name']
+    FILTER_FEATURES = ['operator', 'r_literal']
+    COLUMN_FEATURES = ['data_type']
+    OUTPUT_COLUMN_FEATURES = ['aggregation']
+    TABLE_FEATURES = ['reltuples']
+
+class KryptonMultiCardDetail:
+    JOIN_FEATURES = ['join_type']
+    AGG_FEATURES = ['group_keys']
+    SCAN_FEATURES = ['est_card']
+    FILTER_FEATURES = ['operator', 'r_literal']
+    COLUMN_FEATURES = ['data_type', 'column_id', 'table_id', 'table_size']
+    # connections:
+    # 1. Filter -> Join: join conditions or filter conditions
+    # 2. Column -> Filter
+    # 3. Join -> Agg
+    # 4. Agg -> Join
+    # 5. Scan -> Join
+    # 6. Scan -> Agg

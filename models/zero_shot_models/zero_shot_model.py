@@ -1,4 +1,5 @@
 from torch import nn
+import torch
 
 from models.zero_shot_models.message_aggregators import message_aggregators
 from models.zero_shot_models.utils.fc_out_model import FcOutModel
@@ -48,10 +49,11 @@ class ZeroShotModel(FcOutModel):
                 for enc_name, features in encoders
             })
 
-    def encode_node_types(self, g, features):
+    def encode_node_types(self, plan_idx_to_type, g, features):
         """
         Initializes the hidden states based on the node type specific models.
         """
+        # print(f"plan_idx_to_type: {plan_idx_to_type}")
         # initialize hidden state per node type
         hidden_dict = dict()
         for node_type, input_features in features.items():
@@ -61,10 +63,39 @@ class ZeroShotModel(FcOutModel):
 
                 if node_type.startswith('logical_pred'):
                     node_type_m = self.node_type_encoders['logical_pred']
+                    # print(f"Encoding node type {node_type} with features {input_features.shape}")
                 else:
-                    node_type_m = self.node_type_encoders['plan']
+                    plan_idx = int(node_type[4:])
+                    plan_types = plan_idx_to_type[plan_idx]
+                    # plan_types is a list of 'scan', 'join', 'agg'
+                    # convert plan_types into three encoding vectors
+                    scan_positions = torch.tensor([1 if t == 'scan' else 0 for t in plan_types])
+                    join_positions = torch.tensor([1 if t == 'join' else 0 for t in plan_types])
+                    agg_positions = torch.tensor([1 if t == 'agg' else 0 for t in plan_types])
+                    # mask the input features
+                    scan_features = input_features * scan_positions.unsqueeze(1)
+                    join_features = input_features * join_positions.unsqueeze(1)
+                    agg_features = input_features * agg_positions.unsqueeze(1)
+
+                    scan_hidden = self.node_type_encoders['scan'](scan_features)
+                    join_hidden = self.node_type_encoders['join'](join_features)
+                    agg_hidden = self.node_type_encoders['agg'](agg_features)
+
+                    # mask the hidden states
+                    scan_hidden = scan_hidden * scan_positions.unsqueeze(1)
+                    join_hidden = join_hidden * join_positions.unsqueeze(1)
+                    agg_hidden = agg_hidden * agg_positions.unsqueeze(1)
+                    
+                    hidden_dict[node_type] = scan_hidden + join_hidden + agg_hidden
+                    # print(f"Encoding node type {node_type} with features {input_features.shape} ")
+                    # print(f"Scan: {scan_positions}, Join: {join_positions}, Agg: {agg_positions}")
+                    # print(f"Scan features: {scan_features}, Join features: {join_features}, Agg features: {agg_features}")
+                    # print(f"Scan hidden: {scan_hidden}, Join hidden: {join_hidden}, Agg hidden: {agg_hidden}")
+                    # print(f"Hidden state for {node_type} has shape {hidden_dict[node_type]}")
+                    continue
             else:
                 node_type_m = self.node_type_encoders[node_type]
+                # print(f"Encoding node type {node_type} with features {input_features.shape}")
             hidden_dict[node_type] = node_type_m(input_features)
 
         return hidden_dict
@@ -73,8 +104,8 @@ class ZeroShotModel(FcOutModel):
         """
         Returns logits for output classes
         """
-        graph, features = input
-        features = self.encode_node_types(graph, features)
+        plan_idx_to_type, graph, features = input
+        features = self.encode_node_types(plan_idx_to_type, graph, features)
         out = self.message_passing(graph, features)
 
         return out
@@ -121,6 +152,8 @@ class ZeroShotModel(FcOutModel):
 
             for pd in pass_directions:
                 if len(pd.etypes) > 0:
+                    # print(f"Message passing step: {pd.model_name} with {len(pd.etypes)} edge types ")
+                    # print(f"Input node types: {pd.in_types}, Output node types: {pd.out_types}")
                     out_dict = self.tree_models[pd.model_name](g, etypes=pd.etypes,
                                                                in_node_types=pd.in_types,
                                                                out_node_types=pd.out_types,
