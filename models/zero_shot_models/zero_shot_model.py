@@ -1,5 +1,6 @@
 from torch import nn
 import torch
+import numpy as np
 
 from models.zero_shot_models.message_aggregators import message_aggregators
 from models.zero_shot_models.utils.fc_out_model import FcOutModel
@@ -164,18 +165,24 @@ class ZeroShotModel(FcOutModel):
         # compute top nodes of dags
         out = feat_dict['plan0']
 
-        # feed them into final feed forward network
-        if not self.test:
-            out = self.fcout(out)
+        # save out for debugging
+        embedding = out.detach().cpu().numpy()
 
-        return out
+        # feed them into final feed forward network
+        # if not self.test:
+        out = self.fcout(out)
+
+        if self.test:
+            return out, embedding
+        else:
+            return out
 
 
 class PassDirection:
     """
     Defines a message passing step on the encoded query graphs.
     """
-    def __init__(self, model_name, g, e_name=None, n_dest=None, allow_empty=False):
+    def __init__(self, model_name, g, e_name=None, n_dest=None, allow_empty=True):
         """
         Initializes a message passing step.
         :param model_name: which edge model should be used to combine the messages

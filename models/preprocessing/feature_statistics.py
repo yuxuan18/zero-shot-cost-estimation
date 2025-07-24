@@ -15,25 +15,12 @@ def literal_to_float(literal: dict):
     else:
         r_type = literal.type
         r_literal = literal.literal
-    if r_type in ["string" or "string_like"]:
-        v = len(r_literal)
-    elif r_type == "datetime":
-        if "." in r_literal:
-            # e.g., "2023-10-01 12:00:00.123456"
-            v = (datetime.datetime.strptime(r_literal, "%Y-%m-%d %H:%M:%S.%f") - datetime.datetime(1970, 1, 1)).total_seconds()
-        elif ":" in r_literal:
-            # e.g., "2023-10-01 12:00:00"
-            v = (datetime.datetime.strptime(r_literal, "%Y-%m-%d %H:%M:%S") - datetime.datetime(1970, 1, 1)).total_seconds()
-        else:
-            v = (datetime.datetime.strptime(r_literal, "%Y-%m-%d") - datetime.datetime(1970, 1, 1)).total_seconds()
-    elif r_type == "set":
-        v = len(r_literal.split(','))
-    elif r_type == "column":
+    if r_type == "column":
         v = 0
     elif r_type is None:
         v = 0
     else:
-        raise ValueError(f"Unknown r_literal type: {r_type}")
+        v = r_literal
     
     return v
 

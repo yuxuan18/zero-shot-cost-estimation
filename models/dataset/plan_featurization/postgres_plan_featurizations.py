@@ -42,7 +42,7 @@ class KryptonMultiCardDetail:
     AGG_FEATURES = ['group_keys']
     SCAN_FEATURES = ['est_card']
     FILTER_FEATURES = ['operator', 'r_literal']
-    COLUMN_FEATURES = ['data_type', 'column_id', 'table_id', 'table_size']
+    COLUMN_FEATURES = ['data_type', 'column_id', 'tablename', 'table_size']
     # connections:
     # 1. Filter -> Join: join conditions or filter conditions
     # 2. Column -> Filter

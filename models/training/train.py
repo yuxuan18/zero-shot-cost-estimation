@@ -53,6 +53,7 @@ def train_epoch(epoch_stats, train_loader, model, optimizer, max_epoch_tuples, c
 def validate_model(val_loader, model, epoch=0, epoch_stats=None, metrics=None, max_epoch_tuples=None,
                    custom_batch_to=batch_to, verbose=True, log_all_queries=False):
     model.eval()
+    model.test = True
 
     with torch.autograd.no_grad():
         val_loss = torch.Tensor([0])
@@ -60,6 +61,7 @@ def validate_model(val_loader, model, epoch=0, epoch_stats=None, metrics=None, m
         preds = []
         probs = []
         sample_idxs = []
+        embeddings = []
 
         # evaluate test set using model
         test_start_t = time.perf_counter()
@@ -68,15 +70,11 @@ def validate_model(val_loader, model, epoch=0, epoch_stats=None, metrics=None, m
             if max_epoch_tuples is not None and batch_idx * val_loader.batch_size > max_epoch_tuples:
                 break
 
-            try:
-                val_num_tuples += val_loader.batch_size
+            val_num_tuples += val_loader.batch_size
 
-                input_model, label, sample_idxs_batch = custom_batch_to(batch, model.device, model.label_norm)
-                sample_idxs += sample_idxs_batch
-                output = model(input_model)
-            except Exception as e:
-                print(f"Error during validation for batch {batch_idx} in epoch {epoch}: {e}")
-                continue
+            input_model, label, sample_idxs_batch = custom_batch_to(batch, model.device, model.label_norm)
+            sample_idxs += sample_idxs_batch
+            output, embedding = model(input_model)
 
             # sum up mean batch losses
             val_loss += model.loss_fxn(output, label).cpu()
@@ -99,6 +97,8 @@ def validate_model(val_loader, model, epoch=0, epoch_stats=None, metrics=None, m
 
             preds.append(curr_pred.reshape(-1))
             labels.append(curr_label.reshape(-1))
+            embeddings.append(embedding)
+
 
         if epoch_stats is not None:
             epoch_stats.update(val_time=time.perf_counter() - test_start_t)
@@ -120,6 +120,14 @@ def validate_model(val_loader, model, epoch=0, epoch_stats=None, metrics=None, m
             epoch_stats.update(val_labels=[float(f) for f in labels])
             epoch_stats.update(val_preds=[float(f) for f in preds])
             epoch_stats.update(val_sample_idxs=sample_idxs)
+
+        # concatenate embeddings
+        if len(embeddings) > 0:
+            embeddings = np.concatenate(embeddings, axis=0)
+        # save embeddings for debugging
+        if model.test:
+            np.save(f'embeddings.npy', embeddings)
+            print(f"Saved embeddings")
 
         # save best model for every metric
         any_best_metric = False
@@ -288,9 +296,11 @@ def train_model(workload_runs,
                 early_stop_m = find_early_stopping_metric(metrics)
                 print("Reloading best model")
                 model.load_state_dict(early_stop_m.best_model)
+                start = time.time()
                 validate_model(test_loader, model, epoch=epoch, epoch_stats=test_stats, metrics=metrics,
                                log_all_queries=True)
-
+                end = time.time()
+                print(f"Validation took {end - start:.2f} seconds")
                 save_csv([test_stats], test_path)
 
         else:

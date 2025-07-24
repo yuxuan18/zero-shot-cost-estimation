@@ -27,7 +27,11 @@ def encode(column, plan_params, feature_statistics):
         if value is None:
             enc_value = 61
         else:
-            enc_value = value_dict[str(value)]
+            if str(value) not in value_dict:
+                enc_value = 0
+                print(f"Warning: {value} not in value_dict for {column}. Using 0 as encoding.")
+            else:
+                enc_value = value_dict[str(value)]
     else:
         raise NotImplementedError
     return enc_value
@@ -161,11 +165,11 @@ def parse_predicates(db_column_features, feature_statistics, filter_column, filt
 
         if filter_column.column is not None:
             curr_filter_col_feats = [
-                encode(column, vars(db_column_features[filter_column.column]), feature_statistics)
+                encode(column, vars(db_column_features[int(filter_column.column.split(',')[0])]), feature_statistics)
                 for column in plan_featurization.COLUMN_FEATURES]
             if filter_column.r_literal.type == "column":
                 curr_filter_col_feats += [
-                    encode(feature_name, vars(db_column_features[filter_column.r_literal.literal]), feature_statistics)
+                    encode(feature_name, vars(db_column_features[int(filter_column.column.split(',')[0])]), feature_statistics)
                     for feature_name in plan_featurization.COLUMN_FEATURES]
             else:
                 curr_filter_col_feats += [0 for _ in plan_featurization.COLUMN_FEATURES]
@@ -255,14 +259,11 @@ def postgres_plan_collator(plans, feature_statistics=None, db_statistics=None, p
         sample_idxs.append(sample_idx)
         labels.append(p.plan_runtime)
         # labels.append(p.plan_card)
-        try:
-            plan_to_graph(p, p.database_id, plan_depths, plan_features, plan_to_plan_edges, db_statistics,
-                        feature_statistics, filter_to_plan_edges, filter_features, output_column_to_plan_edges,
-                        output_column_features, column_to_output_column_edges, column_features, table_features,
-                        table_to_plan_edges, output_column_idx, column_idx, table_idx,
-                        plan_featurization, predicate_depths, intra_predicate_edges, logical_preds, plan_idx_to_type)
-        except Exception as e:
-            return None, None, None, None, None
+        plan_to_graph(p, p.database_id, plan_depths, plan_features, plan_to_plan_edges, db_statistics,
+                    feature_statistics, filter_to_plan_edges, filter_features, output_column_to_plan_edges,
+                    output_column_features, column_to_output_column_edges, column_features, table_features,
+                    table_to_plan_edges, output_column_idx, column_idx, table_idx,
+                    plan_featurization, predicate_depths, intra_predicate_edges, logical_preds, plan_idx_to_type)
 
     assert len(labels) == len(plans)
     assert len(plan_depths) == len(plan_features)
@@ -308,10 +309,7 @@ def postgres_plan_collator(plans, feature_statistics=None, db_statistics=None, p
                                         num_nodes_dict)
 
     # create graph
-    try:
-        graph = dgl.heterograph(data_dict, num_nodes_dict=num_nodes_dict)
-    except Exception as e:
-        return None, None, None, None, None
+    graph = dgl.heterograph(data_dict, num_nodes_dict=num_nodes_dict)
     graph.max_depth = max_depth
     graph.max_pred_depth = max_pred_depth
 
