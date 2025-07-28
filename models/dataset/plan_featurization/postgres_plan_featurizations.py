@@ -41,6 +41,8 @@ class KryptonMultiCardDetail:
     JOIN_FEATURES = ['join_type']
     AGG_FEATURES = ['group_keys']
     SCAN_FEATURES = ['est_card']
+    SET_FEATURES = ['set_op_type']
+    LIMIT_FEATURES = ['n_limit']
     FILTER_FEATURES = ['operator', 'r_literal']
     COLUMN_FEATURES = ['data_type', 'column_id', 'tablename', 'table_size']
     # connections:

@@ -26,6 +26,8 @@ class PostgresZeroShotModel(ZeroShotModel):
                 ('join', plan_featurization.JOIN_FEATURES),
                 ('agg', plan_featurization.AGG_FEATURES),
                 ('scan', plan_featurization.SCAN_FEATURES),
+                ('set', plan_featurization.SET_FEATURES),
+                ('limit', plan_featurization.LIMIT_FEATURES),
                 ('filter_column', plan_featurization.FILTER_FEATURES + plan_featurization.COLUMN_FEATURES * 2),
                 ('logical_pred', plan_featurization.FILTER_FEATURES),
             ]

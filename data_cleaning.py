@@ -4,12 +4,15 @@ import json
 import datetime
 import argparse
 import math
+from tqdm import tqdm
 
-from krypton_utils.tpch import col2id
+from krypton_utils.tpcds import col2id
 
 def read_feature_from_plan(plan_file):
     with open(plan_file, 'r', encoding='utf-8') as file:
         content = file.read()
+        if "PLAN STEP FEATURE" not in content:
+            return None
         plan_feature_lines = content.split('PLAN STEP FEATURE')[-1].strip().split("\n")
     plan_feature = ""
     for line in plan_feature_lines:
@@ -29,6 +32,12 @@ def read_feature_from_plan(plan_file):
 def column_name_to_id(column_name: str):
     if column_name == "count()":
         return "count"
+    if column_name == "literal":
+        return "literal"
+    if column_name == "rank()":
+        return "rank"
+    if "InputRefExpr" in column_name:
+        return ""
     for col in col2id:
         if col.endswith(column_name.lower()):
             return col2id[col]
@@ -108,6 +117,26 @@ def normalize_filter(filter_feature: dict, literal_min_max):
     return normalized_filter_feature
 
 def normalize_plan_features(plan_feature: dict, literal_min_max: dict):
+
+    if "analytic" in plan_feature["opName"].lower():
+        normalized_plan_feature = normalize_plan_features(plan_feature["children"][0], literal_min_max)
+        if 'filter_columns' in normalized_plan_feature['plan_parameters'] and "filterColumns" in plan_feature:
+            normalized_plan_feature['plan_parameters']['filter_columns'] = {
+                "column": None,
+                "operator": "AND",
+                "r_literal": {
+                    "type": None,
+                    "literal": None
+                },
+                "children": [
+                    normalize_filter(plan_feature['filterColumns'], literal_min_max),
+                    normalized_plan_feature['plan_parameters']['filter_columns']
+                ]
+            }
+        elif "filterColumns" in plan_feature:
+            normalized_plan_feature['plan_parameters']['filter_columns'] = normalize_filter(plan_feature['filterColumns'], literal_min_max)
+        return normalized_plan_feature
+
     normalized_plan_feature = {
         "plan_parameters": {
             "op_name": plan_feature['opName'] if "join" not in plan_feature['opName'].lower() else "JoinStep",
@@ -123,6 +152,12 @@ def normalize_plan_features(plan_feature: dict, literal_min_max: dict):
     # parse est_card
     if 'estCard' in plan_feature:
         normalized_plan_feature["plan_parameters"]['est_card'] = plan_feature['estCard']
+
+    if 'nLimit' in plan_feature:
+        normalized_plan_feature["plan_parameters"]['n_limit'] = plan_feature['nLimit']
+
+    if 'setOpType' in plan_feature:
+        normalized_plan_feature["plan_parameters"]['set_op_type'] = plan_feature['setOpType'].split("Step")[0].lower()
 
     # parse group_keys
     if 'groupKeys' in plan_feature:
@@ -183,21 +218,21 @@ def split_subplans(plan_feature: dict):
             break
         current_plan = stack.pop()
         current_plan["query_id"] = plan_feature["query_id"]
-        if "read" not in current_plan["plan_parameters"]["op_name"].lower():
+        if "read" not in current_plan["plan_parameters"]["op_name"].lower() and current_plan["plan_runtime"] != 0:
             subplans.append(current_plan)
         for child in current_plan.get('children', []):
             stack.append(child)
     return subplans
 
 def read_plan_files():
-    test = [2, 3, 4, 5]
-    train = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110]
+    test = [1, 2]
+    train = range(3, 301)
     test_files = []
     train_files = []
     for i in train:
-        train_files.extend(glob.glob(f"/mydata/workloads/tpch_1t_plans/query*/{i}.out"))
+        train_files.extend(glob.glob(f"/mydata/workloads/tpcds_1t_plans/query*/{i}.out"))
     for i in test:
-        test_files.extend(glob.glob(f"/mydata/workloads/tpch_1t_plans/query*/{i}.out"))
+        test_files.extend(glob.glob(f"/mydata/workloads/tpcds_1t_plans/query*/{i}.out"))
     
     return train_files, test_files
 
@@ -208,29 +243,38 @@ def prepare_training_data(args):
     test_plans = []
     literal_min_max = {}
 
-    for train_file in train_files:
+    print(f"Processing training plan ...")
+    for train_file in tqdm(train_files):
         plan_feature = read_feature_from_plan(train_file)
+        if plan_feature is None:
+            continue
         normalized_plan_feature = normalize_plan_features(plan_feature, literal_min_max)
         normalized_plan_feature["query_id"] = plan_feature["query_id"]
         normalize_literal(normalized_plan_feature, literal_min_max)
         subplans = split_subplans(normalized_plan_feature)
         train_plans.extend(subplans)
 
-    for test_file in test_files:
+    print(f"Number of training plans: {len(train_plans)}")
+
+    for test_file in tqdm(test_files):
         plan_feature = read_feature_from_plan(test_file)
+        if plan_feature is None:
+            continue
         normalized_plan_feature = normalize_plan_features(plan_feature, {})
         normalized_plan_feature["query_id"] = plan_feature["query_id"]
         normalize_literal(normalized_plan_feature, literal_min_max)
         subplans = split_subplans(normalized_plan_feature)
         test_plans.extend(subplans)
 
-    with open(f"krypton_utils/tpch_stats.json") as f:
-        tpch_stats = json.load(f)
+    print(f"Number of test plans: {len(test_plans)}")
+
+    with open(f"krypton_utils/tpcds_stats.json") as f:
+        tpcds_stats = json.load(f)
 
     test_data = {
         "parsed_plans": test_plans,
         "literal_min_max": literal_min_max,
-        "database_stats": tpch_stats,
+        "database_stats": tpcds_stats,
         "run_kwargs": {
             "hardware": "cpu"
         }
@@ -239,7 +283,7 @@ def prepare_training_data(args):
     train_data = {
         "parsed_plans": train_plans,
         "literal_min_max": literal_min_max,
-        "database_stats": tpch_stats,
+        "database_stats": tpcds_stats,
         "run_kwargs": {
             "hardware": "cpu"
         }
@@ -248,14 +292,14 @@ def prepare_training_data(args):
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
     
-    # with open(os.path.join(args.output_dir, "train_data.json"), 'w', encoding='utf-8') as f:
-    #     json.dump(train_data, f, indent=2, ensure_ascii=False)
+    with open(os.path.join(args.output_dir, "tpcds_train_data.json"), 'w', encoding='utf-8') as f:
+        json.dump(train_data, f, indent=2, ensure_ascii=False)
 
-    with open(os.path.join(args.output_dir, "test_data.json"), 'w', encoding='utf-8') as f:
+    with open(os.path.join(args.output_dir, "tpcds_test_data.json"), 'w', encoding='utf-8') as f:
         json.dump(test_data, f, indent=2, ensure_ascii=False)
 
-    # with open(os.path.join(args.output_dir, "literal_min_max.json"), 'w', encoding='utf-8') as f:
-    #     json.dump(literal_min_max, f, indent=2, ensure_ascii=False)
+    with open(os.path.join(args.output_dir, "literal_min_max.json"), 'w', encoding='utf-8') as f:
+        json.dump(literal_min_max, f, indent=2, ensure_ascii=False)
 
 def prepare_eval_data(args):
     # load previous results
@@ -339,7 +383,7 @@ def merge_prediction_hash(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Normalize plan features and filters from JSON files.")
-    parser.add_argument('--output_dir', type=str, default="./data/tpch", help='Output file to save the normalized plan features.')
+    parser.add_argument('--output_dir', type=str, default="./data/tpcds", help='Output file to save the normalized plan features.')
     parser.add_argument('--mode', type=str, default='train', choices=['train', 'eval', 'finalize'], help='Mode to run the script: train or eval.')
     args = parser.parse_args()
 

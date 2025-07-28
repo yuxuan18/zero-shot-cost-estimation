@@ -73,21 +73,29 @@ class ZeroShotModel(FcOutModel):
                     scan_positions = torch.tensor([1 if t == 'scan' else 0 for t in plan_types])
                     join_positions = torch.tensor([1 if t == 'join' else 0 for t in plan_types])
                     agg_positions = torch.tensor([1 if t == 'agg' else 0 for t in plan_types])
+                    set_positions = torch.tensor([1 if t == 'set' else 0 for t in plan_types])
+                    limit_positions = torch.tensor([1 if t == 'limit' else 0 for t in plan_types])
                     # mask the input features
                     scan_features = input_features * scan_positions.unsqueeze(1)
                     join_features = input_features * join_positions.unsqueeze(1)
                     agg_features = input_features * agg_positions.unsqueeze(1)
+                    set_features = input_features * set_positions.unsqueeze(1)
+                    limit_features = input_features * limit_positions.unsqueeze(1)
 
                     scan_hidden = self.node_type_encoders['scan'](scan_features)
                     join_hidden = self.node_type_encoders['join'](join_features)
                     agg_hidden = self.node_type_encoders['agg'](agg_features)
+                    set_hidden = self.node_type_encoders['set'](set_features)
+                    limit_hidden = self.node_type_encoders['limit'](limit_features)
 
                     # mask the hidden states
                     scan_hidden = scan_hidden * scan_positions.unsqueeze(1)
                     join_hidden = join_hidden * join_positions.unsqueeze(1)
                     agg_hidden = agg_hidden * agg_positions.unsqueeze(1)
+                    set_hidden = set_hidden * set_positions.unsqueeze(1)
+                    limit_hidden = limit_hidden * limit_positions.unsqueeze(1)
                     
-                    hidden_dict[node_type] = scan_hidden + join_hidden + agg_hidden
+                    hidden_dict[node_type] = scan_hidden + join_hidden + agg_hidden + set_hidden + limit_hidden
                     # print(f"Encoding node type {node_type} with features {input_features.shape} ")
                     # print(f"Scan: {scan_positions}, Join: {join_positions}, Agg: {agg_positions}")
                     # print(f"Scan features: {scan_features}, Join features: {join_features}, Agg features: {agg_features}")

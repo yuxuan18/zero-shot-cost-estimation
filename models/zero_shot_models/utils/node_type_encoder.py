@@ -17,6 +17,7 @@ class NodeTypeEncoder(FcOutModel):
         
 
         for f in features:
+            print(f)
             if f not in feature_statistics:
                 raise ValueError(f"Did not find {f} in feature statistics")
 

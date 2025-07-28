@@ -99,7 +99,7 @@ def validate_model(val_loader, model, epoch=0, epoch_stats=None, metrics=None, m
             labels.append(curr_label.reshape(-1))
             embeddings.append(embedding)
 
-
+        model.test = False
         if epoch_stats is not None:
             epoch_stats.update(val_time=time.perf_counter() - test_start_t)
             epoch_stats.update(val_num_tuples=val_num_tuples)
