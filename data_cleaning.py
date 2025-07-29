@@ -322,41 +322,15 @@ def prepare_eval_data(args):
             normalize_literal(normalized_plan_feature, literal_min_max)
             eval_plan_features.append(normalized_plan_feature)
 
-    eval_plan_hashcodes = []
-    with open(f"{args.output_dir}/plan_feature_hashcode.txt", 'r', encoding='utf-8') as f:
-        for line in f:
-            hashcode = line.strip()
-            if hashcode not in existing_hashcodes:
-                eval_plan_hashcodes.append(hashcode)
-    
-    final_eval_plan_features = []
-    final_ids = []
-    i = 0
-    for hashcode, plan_feature in zip(eval_plan_hashcodes, eval_plan_features):
-        if hashcode not in existing_hashcodes:
-            final_eval_plan_features.append(plan_feature)
-            # existing_hashcodes.add(hashcode)
-            final_ids.append(i)
-        i += 1
-    
-    # with open(f"{args.output_dir}/plan_feature_hashcode_new.txt", 'w', encoding='utf-8') as f:
-    #     for i in final_ids:
-    #         f.write(f"{eval_plan_hashcodes[i]}\n")
-    
-    # with open(f"{args.output_dir}/plan_features_new.jsonl", 'w', encoding='utf-8') as f:
-    #     for i in final_ids:
-    #         f.write(json.dumps(eval_plan_features_raw[i], ensure_ascii=False) + '\n')
-
     print(f"Number of new eval plans : {len(eval_plan_features)}")
-    print(f"Number of new unique eval plans: {len(final_eval_plan_features)}")
 
-    with open(f"krypton_utils/tpch_stats.json") as f:
-        tpch_stats = json.load(f)
+    with open(f"krypton_utils/tpcds_stats.json") as f:
+        tpcds_stats = json.load(f)
 
     eval_data = {
-        "parsed_plans": final_eval_plan_features,
+        "parsed_plans": eval_plan_features,
         "literal_min_max": literal_min_max,
-        "database_stats": tpch_stats,
+        "database_stats": tpcds_stats,
         "run_kwargs": {
             "hardware": "cpu"
         }
@@ -368,7 +342,7 @@ def prepare_eval_data(args):
 
 def merge_prediction_hash(args):
     hashcodes = []
-    with open(f"{args.output_dir}/plan_feature_hashcode_new.txt") as f:
+    with open(f"{args.output_dir}/unique_plan_feature_hashcode.txt") as f:
         for line in f:
             hashcodes.append(line.strip())
     predictions = []
