@@ -32,6 +32,8 @@ if __name__ == '__main__':
     parser.add_argument('--plan_featurization', default='PostgresTrueCardDetail')
     parser.add_argument('--hyperparameter_path', default=None)
     parser.add_argument('--seed', type=int, default=0)
+    parser.add_argument('--finetune', action='store_true')
+    parser.add_argument('--early_stopping_patience', type=int, default=20)
 
     args = parser.parse_args()
 
@@ -60,4 +62,5 @@ if __name__ == '__main__':
                                       seed=args.seed, database=args.database, limit_queries=args.limit_queries,
                                       limit_queries_affected_wl=args.limit_queries_affected_wl,
                                       max_no_epochs=args.max_no_epochs, skip_train=args.skip_train,
-                                      loss_class_name=args.loss_class_name)
+                                      loss_class_name=args.loss_class_name, is_finetine=args.finetune,
+                                      early_stopping_patience=args.early_stopping_patience)
