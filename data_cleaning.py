@@ -4,6 +4,7 @@ import json
 import datetime
 import argparse
 import math
+from copy import deepcopy
 
 from krypton_utils.tpch import col2id
 
@@ -258,12 +259,6 @@ def prepare_training_data(args):
     #     json.dump(literal_min_max, f, indent=2, ensure_ascii=False)
 
 def prepare_eval_data(args):
-    # load previous results
-    existing_hashcodes = set()
-    # with open(f"{args.output_dir}/model_inference.txt", 'r', encoding='utf-8') as f:
-    #     for line in f:
-    #         hashcode = line.strip().split(',')[0]
-    #         existing_hashcodes.add(hashcode)
 
     with open(f"{args.output_dir}/literal_min_max.json", 'r', encoding='utf-8') as f:
         literal_min_max = json.load(f)
@@ -278,39 +273,13 @@ def prepare_eval_data(args):
             normalize_literal(normalized_plan_feature, literal_min_max)
             eval_plan_features.append(normalized_plan_feature)
 
-    eval_plan_hashcodes = []
-    with open(f"{args.output_dir}/plan_feature_hashcode.txt", 'r', encoding='utf-8') as f:
-        for line in f:
-            hashcode = line.strip()
-            if hashcode not in existing_hashcodes:
-                eval_plan_hashcodes.append(hashcode)
-    
-    final_eval_plan_features = []
-    final_ids = []
-    i = 0
-    for hashcode, plan_feature in zip(eval_plan_hashcodes, eval_plan_features):
-        if hashcode not in existing_hashcodes:
-            final_eval_plan_features.append(plan_feature)
-            # existing_hashcodes.add(hashcode)
-            final_ids.append(i)
-        i += 1
-    
-    # with open(f"{args.output_dir}/plan_feature_hashcode_new.txt", 'w', encoding='utf-8') as f:
-    #     for i in final_ids:
-    #         f.write(f"{eval_plan_hashcodes[i]}\n")
-    
-    # with open(f"{args.output_dir}/plan_features_new.jsonl", 'w', encoding='utf-8') as f:
-    #     for i in final_ids:
-    #         f.write(json.dumps(eval_plan_features_raw[i], ensure_ascii=False) + '\n')
-
     print(f"Number of new eval plans : {len(eval_plan_features)}")
-    print(f"Number of new unique eval plans: {len(final_eval_plan_features)}")
 
     with open(f"krypton_utils/tpch_stats.json") as f:
         tpch_stats = json.load(f)
 
     eval_data = {
-        "parsed_plans": final_eval_plan_features,
+        "parsed_plans": eval_plan_features,
         "literal_min_max": literal_min_max,
         "database_stats": tpch_stats,
         "run_kwargs": {
@@ -324,7 +293,7 @@ def prepare_eval_data(args):
 
 def merge_prediction_hash(args):
     hashcodes = []
-    with open(f"{args.output_dir}/plan_feature_hashcode_new.txt") as f:
+    with open(f"{args.output_dir}/unique_plan_feature_hashcode.txt") as f:
         for line in f:
             hashcodes.append(line.strip())
     predictions = []
@@ -337,10 +306,189 @@ def merge_prediction_hash(args):
         for i in range(len(hashcodes)):
             f.write(f"{hashcodes[i]},{predictions[i]}\n")
 
+def clean_plan(plan_feature):
+    stack = [plan_feature]
+    while stack:
+        current_plan = stack.pop()
+        if "children" in current_plan:
+            for child in current_plan["children"]:
+                stack.append(child)
+        if "actCard" in current_plan:
+            del current_plan["actCard"]
+        if "join" in current_plan["opName"].lower():
+            current_plan["opName"] = "JoinStep"
+
+def collect_act_card(plan_feature):
+    stack = [plan_feature]
+    actCards = []
+    while stack:
+        current_plan = stack.pop()
+        actCards.append(current_plan.get("actCard", None))
+        if "children" in current_plan:
+            for child in current_plan["children"]:
+                stack.append(child)
+    return actCards
+
+def clean_and_split_subplans(plan_feature: dict):
+    subplans = []
+    actCards = collect_act_card(plan_feature)
+    stack = [plan_feature]
+    while stack:
+        if len(stack) == 0:
+            break
+        current_plan = deepcopy(stack.pop())
+        print(f"Processing plan: {current_plan}")
+        clean_plan(current_plan)
+        assert 'actCard' not in current_plan, "actCard should be removed from the plan feature"
+        subplans.append(current_plan)
+        for child in current_plan.get('children', []):
+            stack.append(child)
+    return subplans, actCards
+
+def prepare_filter_columns_to_hash(filter_columns: dict):
+    if "rLiteralType" in filter_columns and filter_columns["rLiteralType"] == "column":
+        all_columns = filter_columns["column"].split(',') + filter_columns["rLiteralValue"].split(',')
+        filter_columns["column"] = list2str(all_columns)
+        del filter_columns["rLiteralValue"]
+    
+    for child in filter_columns.get('children', []):
+        prepare_filter_columns_to_hash(child)
+
+def hash_plan_feature(plan_feature):
+    plan_feature_copy = deepcopy(plan_feature)
+    # prepare the filter columns for hashing
+    stack = [plan_feature_copy]
+    while stack:
+        if len(stack) == 0:
+            break
+        current_plan = stack.pop()
+        if "plan_parameters" in current_plan and "filter_columns" in current_plan["plan_parameters"]:
+            prepare_filter_columns_to_hash(current_plan["plan_parameters"]["filter_columns"])
+        for child in current_plan.get('children', []):
+            stack.append(child)
+    return hash(json.dumps(plan_feature_copy, sort_keys=True, ensure_ascii=False))
+
+def collect_feedback(args):
+    # read unique plan features
+    with open(f"{args.output_dir}/unique_plan_features.jsonl", 'r', encoding='utf-8') as f:
+        unique_plan_features = [json.loads(line.strip()) for line in f]
+    
+    hashcodes = []
+    for plan_feature in unique_plan_features:
+        clean_plan(plan_feature)
+        hashcode = hash_plan_feature(plan_feature)
+        hashcodes.append(hashcode)
+    
+    # read model inference results
+    est_cards = []
+    with open(f"{args.output_dir}/model_inference.txt", 'r', encoding='utf-8') as f:
+        for line in f:
+            hashcode, est_card = line.strip().split(',')
+            est_cards.append(float(est_card))
+
+    # read runtime profile
+    plan_files = glob.glob("/mydata/workloads/tpch_1t_test/model/query*/1.out")
+    runtime_profiles = []
+    for plan_file in plan_files:
+        runtime_profiles.append(read_feature_from_plan(plan_file))
+
+    # get all the subplans and their actCard
+    subplans = []
+    act_cards = []
+    for plan_feature in runtime_profiles:
+        plans, actCards = clean_and_split_subplans(plan_feature)
+        subplans.extend(plans)
+        act_cards.extend(actCards)
+    if len(subplans) != len(act_cards):
+        raise ValueError(f"Number of subplans {len(subplans)} does not match number of actCards {len(act_cards)}")
+    
+    subplan_hashcodes = []
+    for plan_feature in subplans:
+        subplan_hashcodes.append(hash_plan_feature(plan_feature))
+
+
+    # read literal min max
+    with open(f"{args.output_dir}/literal_min_max.json", 'r', encoding='utf-8') as f:
+        literal_min_max = json.load(f)
+    
+    # search for the hashcodes in the unique plan features
+    fail_to_find = 0
+    finetune_plan_features = []
+    finetune_plan_features_test = []
+    for i, hashcde in enumerate(hashcodes):
+        plan_feature = unique_plan_features[i]
+        if hashcde in subplan_hashcodes:
+            index = subplan_hashcodes.index(hashcde)
+            act_card = float(act_cards[index]) if act_cards[index] is not None else -1
+            est_card = est_cards[i]
+            normalized_plan_feature = normalize_plan_features(plan_feature, {})
+            normalize_literal(normalized_plan_feature, literal_min_max)
+            normalized_plan_feature["plan_runtime"] = act_card
+            if max(est_card / act_card, act_card / est_card) > 2:
+                finetune_plan_features.append(normalized_plan_feature)
+            else:
+                finetune_plan_features_test.append(normalized_plan_feature)
+        else:
+            fail_to_find += 1
+
+    print(f"Failed to find {fail_to_find} out of {len(hashcodes)} hashcodes in the runtime profile subplans.")
+
+    with open(f"krypton_utils/tpch_stats.json") as f:
+        tpch_stats = json.load(f)
+
+    finetune_data = {
+        "parsed_plans": finetune_plan_features,
+        "literal_min_max": literal_min_max,
+        "database_stats": tpch_stats,
+        "run_kwargs": {
+            "hardware": "cpu"
+        }
+    }
+
+    with open(os.path.join(args.output_dir, "finetune_data.json"), 'w', encoding='utf-8') as f:
+        json.dump(finetune_data, f, indent=2, ensure_ascii=False)
+
+    finetune_data_test = {
+        "parsed_plans": finetune_plan_features_test,
+        "literal_min_max": literal_min_max,
+        "database_stats": tpch_stats,
+        "run_kwargs": {
+            "hardware": "cpu"
+        }
+    }
+
+    with open(os.path.join(args.output_dir, "finetune_data_test.json"), 'w', encoding='utf-8') as f:
+        json.dump(finetune_data_test, f, indent=2, ensure_ascii=False)
+
+def consider_confidence(args):
+    is_below_threshold = []
+    with open(f"{args.output_dir}/confidence.csv", 'r', encoding='utf-8') as f:
+        for line in f:
+            proxy_q_error, is_below = line.strip().split(',')
+            is_below_threshold.append(is_below.lower() == 'true')
+    
+    hashcodes = []
+    with open(f"{args.output_dir}/unique_plan_feature_hashcode.txt") as f:
+        for line in f:
+            hashcodes.append(line.strip())
+    predictions = []
+    with open(f"{args.output_dir}/eval_predictions.csv") as f:
+        for line in f:
+            predictions.append(math.ceil(float(line.strip().split(',')[1])))
+
+    model_inference_w_confidence = []
+    for is_below, hashcode, prediction in zip(is_below_threshold, hashcodes, predictions):
+        if is_below:
+            model_inference_w_confidence.append(f"{hashcode},{prediction}\n")
+
+    with open(f"{args.output_dir}/model_inference_w_confidence.txt", 'w', encoding='utf-8') as f:
+        f.writelines(model_inference_w_confidence)
+    
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Normalize plan features and filters from JSON files.")
     parser.add_argument('--output_dir', type=str, default="./data/tpch", help='Output file to save the normalized plan features.')
-    parser.add_argument('--mode', type=str, default='train', choices=['train', 'eval', 'finalize'], help='Mode to run the script: train or eval.')
+    parser.add_argument('--mode', type=str, default='train', choices=['train', 'eval', 'finalize', 'feedback', 'confidence'], help='Mode to run the script: train or eval.')
     args = parser.parse_args()
 
     if args.mode == 'train':
@@ -350,3 +498,9 @@ if __name__ == "__main__":
     elif args.mode == 'finalize':
         print("Finalizing data cleaning...")
         merge_prediction_hash(args)
+    elif args.mode == 'feedback':
+        print("Collecting feedback...")
+        collect_feedback(args)
+    elif args.mode == 'confidence':
+        print("Considering confidence...")
+        consider_confidence(args)
