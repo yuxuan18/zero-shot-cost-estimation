@@ -102,7 +102,7 @@ def derive_label_normalizer(loss_class_name, y):
 
 def create_dataloader(workload_run_paths, test_workload_run_paths, statistics_file, plan_featurization_name, database,
                       val_ratio=0.15, batch_size=32, shuffle=True, num_workers=1, pin_memory=False,
-                      limit_queries=None, limit_queries_affected_wl=None, loss_class_name=None):
+                      limit_queries=None, limit_queries_affected_wl=None, loss_class_name=None, is_finetune=False):
     """
     Creates dataloaders that batches physical plans to train the model in a distributed fashion.
     :param workload_run_paths:
@@ -115,11 +115,20 @@ def create_dataloader(workload_run_paths, test_workload_run_paths, statistics_fi
     :return:
     """
     # split plans into train/test/validation
-    label_norm, train_dataset, val_dataset, database_statistics = create_datasets(workload_run_paths,
-                                                                                  loss_class_name=loss_class_name,
-                                                                                  val_ratio=val_ratio,
-                                                                                  limit_queries=limit_queries,
-                                                                                  limit_queries_affected_wl=limit_queries_affected_wl)
+    if not is_finetune:
+        label_norm, train_dataset, val_dataset, database_statistics = create_datasets(workload_run_paths,
+                                                                                    loss_class_name=loss_class_name,
+                                                                                    val_ratio=val_ratio,
+                                                                                    limit_queries=limit_queries,
+                                                                                    limit_queries_affected_wl=limit_queries_affected_wl)
+    else:
+        label_norm, train_dataset, _, database_statistics = create_datasets(workload_run_paths,
+                                                                                    cap_training_samples=None,
+                                                                                    loss_class_name=loss_class_name,
+                                                                                    val_ratio=0.0,
+                                                                                    limit_queries=limit_queries,
+                                                                                    limit_queries_affected_wl=limit_queries_affected_wl)
+        val_dataset = train_dataset
 
     # postgres_plan_collator does the heavy lifting of creating the graphs and extracting the features and thus requires both
     # database statistics but also feature statistics

@@ -99,7 +99,6 @@ def validate_model(val_loader, model, epoch=0, epoch_stats=None, metrics=None, m
             labels.append(curr_label.reshape(-1))
             embeddings.append(embedding)
 
-
         if epoch_stats is not None:
             epoch_stats.update(val_time=time.perf_counter() - test_start_t)
             epoch_stats.update(val_num_tuples=val_num_tuples)
@@ -138,6 +137,9 @@ def validate_model(val_loader, model, epoch=0, epoch_stats=None, metrics=None, m
                 if best_seen and metric.early_stopping_metric:
                     any_best_metric = True
                     print(f"New best model for {metric.metric_name}")
+        
+        model.test = False
+
 
     return any_best_metric
 
@@ -177,7 +179,8 @@ def train_model(workload_runs,
                 limit_queries=None,
                 limit_queries_affected_wl=None,
                 skip_train=False,
-                seed=0):
+                seed=0,
+                is_finetine=False):
     if model_kwargs is None:
         model_kwargs = dict()
 
@@ -201,7 +204,8 @@ def train_model(workload_runs,
         create_dataloader(workload_runs, test_workload_runs, statistics_file, plan_featurization_name, database,
                           val_ratio=0.15, batch_size=batch_size, shuffle=True, num_workers=num_workers,
                           pin_memory=False, limit_queries=limit_queries,
-                          limit_queries_affected_wl=limit_queries_affected_wl, loss_class_name=loss_class_name)
+                          limit_queries_affected_wl=limit_queries_affected_wl, loss_class_name=loss_class_name,
+                          is_finetune=is_finetine)
 
     if loss_class_name == 'QLoss':
         metrics = [RMSE(), MAPE(), QError(percentile=50, early_stopping_metric=True), QError(percentile=95),
@@ -225,6 +229,9 @@ def train_model(workload_runs,
 
     csv_stats, epochs_wo_improvement, epoch, model, optimizer, metrics, finished = \
         load_checkpoint(model, target_dir, filename_model, optimizer=optimizer, metrics=metrics, filetype='.pt')
+
+    if is_finetine:
+        finished = False
 
     # train an actual model (q-error? or which other loss?)
     while epoch < epochs and not finished and not skip_train:
@@ -386,7 +393,9 @@ def train_readout_hyperparams(workload_runs,
                               limit_queries=None,
                               limit_queries_affected_wl=None,
                               max_no_epochs=None,
-                              skip_train=False
+                              skip_train=False,
+                              early_stopping_patience=20,
+                              is_finetine=False
                               ):
     """
     Reads out hyperparameters and trains model
@@ -432,7 +441,7 @@ def train_readout_hyperparams(workload_runs,
                         hidden_dim=hyperparams.pop('hidden_dim'),
                         output_dim=1,
                         epochs=200 if max_no_epochs is None else max_no_epochs,
-                        early_stopping_patience=20,
+                        early_stopping_patience=early_stopping_patience,
                         max_epoch_tuples=max_epoch_tuples,
                         batch_size=hyperparams.pop('batch_size'),
                         device=device,
@@ -440,7 +449,8 @@ def train_readout_hyperparams(workload_runs,
                         seed=seed,
                         limit_queries=limit_queries,
                         limit_queries_affected_wl=limit_queries_affected_wl,
-                        skip_train=skip_train
+                        skip_train=skip_train,
+                        is_finetine=is_finetine
                         )
 
     assert len(hyperparams) == 0, f"Not all hyperparams were used (not used: {hyperparams.keys()}). Hence generation " \
