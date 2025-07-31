@@ -339,6 +339,30 @@ def prepare_eval_data(args):
     with open(os.path.join(args.output_dir, "eval_data.json"), 'w', encoding='utf-8') as f:
         json.dump(eval_data, f, indent=2, ensure_ascii=False)
 
+def consider_confidence():
+    is_below_threshold = []
+    with open("data/tpcds/confidence.csv", "r") as f:
+        for line in f:
+            parts = line.strip().split(',')
+            assert len(parts) == 2, "Each line must contain exactly two values: label and prediction"
+            is_below_threshold.append(parts[1].lower() == 'true')
+    
+    hashcodes = []
+    with open("data/tpcds/unique_plan_feature_hashcode.txt", "r") as f:
+        for line in f:
+            hashcodes.append(line.strip())
+
+    predictions = []
+    with open("data/tpcds/eval_predictions.csv", "r") as f:
+        for line in f:
+            predictions.append(line.strip().split(',')[1])
+    
+    assert len(hashcodes) == len(predictions) == len(is_below_threshold), "Length mismatch between hashcodes, predictions and is_below_threshold"
+
+    with open("data/tpcds/model_inference.txt", 'a+', encoding='utf-8') as f:
+        for is_below, hashcode, prediction in zip(is_below_threshold, hashcodes, predictions):
+            if is_below:
+                f.write(f"{hashcode},{prediction}\n")
 
 def merge_prediction_hash(args):
     hashcodes = []
@@ -358,7 +382,7 @@ def merge_prediction_hash(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Normalize plan features and filters from JSON files.")
     parser.add_argument('--output_dir', type=str, default="./data/tpcds", help='Output file to save the normalized plan features.')
-    parser.add_argument('--mode', type=str, default='train', choices=['train', 'eval', 'finalize'], help='Mode to run the script: train or eval.')
+    parser.add_argument('--mode', type=str, default='train', choices=['train', 'eval', 'finalize', 'confidence'], help='Mode to run the script: train or eval.')
     args = parser.parse_args()
 
     if args.mode == 'train':
@@ -368,3 +392,6 @@ if __name__ == "__main__":
     elif args.mode == 'finalize':
         print("Finalizing data cleaning...")
         merge_prediction_hash(args)
+    elif args.mode == 'confidence':
+        print("Considering confidence...")
+        consider_confidence()
