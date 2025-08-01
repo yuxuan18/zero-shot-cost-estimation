@@ -127,11 +127,13 @@ if __name__ == "__main__":
     proxy_q_error_eval = calculate_proxy_error(train_embeddings, eval_embeddings, train_labels, eval_predictions, train_predictions)
     end = time.time()
     count = 0
+    pred_id = 0
     for proxy_q_eval, eval_pred in zip(proxy_q_error_eval, eval_predictions):
         if proxy_q_eval >= threshold:
-            print(f"Prediction {eval_pred} is above the threshold with proxy Q error {proxy_q_eval}")
+            print(f"Prediction {pred_id}: {eval_pred} is above the threshold with proxy Q error {proxy_q_eval}")
         else:
             count += 1
+        pred_id += 1
     is_below_threshold = proxy_q_error_eval < threshold
 
     print(f"Number of predictions below threshold: {count}")
