@@ -15,7 +15,10 @@ def encode(column, plan_params, feature_statistics):
     if column == 'act_card' and column not in plan_params:
         value = 0
     else:
-        value = plan_params[column]
+        try:
+            value = plan_params[column]
+        except KeyError:
+            raise KeyError(f"Column {column} not found in plan parameters: {plan_params}")
 
     if column == "r_literal":
         value = literal_to_float(value)
@@ -154,21 +157,24 @@ def get_col_stats(column, db_column_features):
             "data_type": "character varying",
             "column_id": 1000,
             "table_id": 100,
-            "table_size": 1
+            "table_size": 1,
+            "tablename": "literal_table"  # Placeholder, as type information is not provided
         }
     elif column == "count":
         col_stats = {
             "data_type": "integer",
             "column_id": 1001,
             "table_id": 100,
-            "table_size": 1
+            "table_size": 1,
+            "tablename": "count_table"  # Placeholder, as type information is not provided
         }
     elif column == "rank":
         col_stats = {
             "data_type": "integer",
             "column_id": 1002,
             "table_id": 100,
-            "table_size": 1
+            "table_size": 1,
+            "tablename": "rank_table"  # Placeholder, as type information is not provided
         }
     else:
         col_stats = vars(db_column_features[int(column)])
@@ -201,12 +207,16 @@ def parse_predicates(db_column_features, feature_statistics, filter_column, filt
             assert isinstance(filter_column.column, str), filter_column.column
 
             column = filter_column.column.split(',')[0]
+            if column == '':
+                column = filter_column.column.split(',')[1]
             col_stats = get_col_stats(column, db_column_features)
             curr_filter_col_feats = [
                 encode(column, col_stats, feature_statistics)
                 for column in plan_featurization.COLUMN_FEATURES]
             if filter_column.r_literal.type == "column":
                 column = filter_column.r_literal.literal.split(',')[0]
+                if column == '':
+                    column = filter_column.r_literal.literal.split(',')[1]
                 col_stats = get_col_stats(column, db_column_features)
                 curr_filter_col_feats += [
                     encode(feature_name, col_stats, feature_statistics)

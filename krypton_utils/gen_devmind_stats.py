@@ -1,4 +1,4 @@
-from tpcds import col2id, tab2id, tab2size
+from devmind import col2id, tab2id, tab2size
 import json
 
 stats = {
@@ -12,7 +12,7 @@ for tablename in tab2id:
         "reltuples": tab2size[tablename]
 })
 
-with open("tpcds_column_types.json") as f:
+with open("devmind_column_types.json") as f:
     col2type = json.load(f)
 
     
@@ -25,5 +25,5 @@ for colname in col2id:
         "column_id": len(stats["column_stats"]),  # Assuming nullable columns
     })
 
-with open("tpcds_stats.json", "w") as f:
+with open("devmind_stats.json", "w") as f:
     json.dump(stats, f, indent=2)

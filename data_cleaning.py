@@ -6,7 +6,7 @@ import argparse
 import math
 from tqdm import tqdm
 
-from krypton_utils.tpcds import col2id
+from krypton_utils.devmind import col2id
 
 def read_feature_from_plan(plan_file):
     with open(plan_file, 'r', encoding='utf-8') as file:
@@ -23,9 +23,10 @@ def read_feature_from_plan(plan_file):
     plan_feature = plan_feature.replace('\t', '\\t')
     try:
         plan_feature_json = json.loads(plan_feature)
-        plan_feature_json["query_id"] = plan_file.split('/')[-2].split('.')[0].split('query')[-1]
+        plan_feature_json["query_id"] = plan_file.split('/')[-1].split('.')[0]
     except json.JSONDecodeError as e:
-        print(f"Error decoding JSON from {plan_file}: {e}")
+        # print(f"Error decoding JSON from {plan_file}: {e}")
+        return None
 
     return plan_feature_json
 
@@ -41,7 +42,15 @@ def column_name_to_id(column_name: str):
     for col in col2id:
         if col.endswith(column_name.lower()):
             return col2id[col]
-    raise ValueError(f"Column name {column_name} not found in col2id mapping.")
+    for entry in column_name.split(' '):
+        if entry.count('.') >= 2:
+            col_name = entry.split('.')[-1]
+            tab_name = entry.split('.')[-2]
+            if f'{tab_name}.{col_name}' in col2id:
+                return col2id[f'{tab_name}.{col_name}']
+    
+    # print(f"Column name {column_name} not found in col2id mapping.")
+    return ""
 
 def list2str(lst):
     if len(lst) == 0:
@@ -60,7 +69,10 @@ def value2float(r_literal: str, r_type: str):
     elif r_type == "set":
         v = int(r_literal)
     elif r_type == "datetime":
-        v = (datetime.datetime.strptime(r_literal, "%Y-%m-%d") - datetime.datetime(1970, 1, 1)).total_seconds()
+        if r_literal.count(':') == 2:
+            v = (datetime.datetime.strptime(r_literal, "%Y-%m-%d %H:%M:%S") - datetime.datetime(2020, 1, 1)).total_seconds()
+        else:
+            v = (datetime.datetime.strptime(r_literal, "%Y-%m-%d") - datetime.datetime(2020, 1, 1)).total_seconds()
     elif r_type == "column":
         columns = [col.strip() for col in r_literal.split(',')]
         columns = [column_name_to_id(col) for col in columns]
@@ -117,7 +129,8 @@ def normalize_filter(filter_feature: dict, literal_min_max):
     return normalized_filter_feature
 
 def normalize_plan_features(plan_feature: dict, literal_min_max: dict):
-
+    if "opName" not in plan_feature:
+        return None
     if "analytic" in plan_feature["opName"].lower():
         normalized_plan_feature = normalize_plan_features(plan_feature["children"][0], literal_min_max)
         if 'filter_columns' in normalized_plan_feature['plan_parameters'] and "filterColumns" in plan_feature:
@@ -175,7 +188,8 @@ def normalize_plan_features(plan_feature: dict, literal_min_max: dict):
     if 'children' in plan_feature:
         for child in plan_feature['children']:
             normalized_child = normalize_plan_features(child, literal_min_max)
-            normalized_plan_feature["children"].append(normalized_child)
+            if normalized_child is not None:
+                normalized_plan_feature["children"].append(normalized_child)
     
     return normalized_plan_feature
 
@@ -208,7 +222,8 @@ def normalize_literal(normalized_plan_feature: dict, literal_min_max: dict):
         normalize_filter_literal(normalized_plan_feature["plan_parameters"]["filter_columns"], literal_min_max)
     
     for child in normalized_plan_feature["children"]:
-        normalize_literal(child, literal_min_max)
+        if child is not None:
+            normalize_literal(child, literal_min_max)
 
 def split_subplans(plan_feature: dict):
     subplans = []
@@ -225,14 +240,8 @@ def split_subplans(plan_feature: dict):
     return subplans
 
 def read_plan_files():
-    test = [1, 2]
-    train = range(3, 301)
-    test_files = []
-    train_files = []
-    for i in train:
-        train_files.extend(glob.glob(f"/mydata/workloads/tpcds_1t_plans/query*/{i}.out"))
-    for i in test:
-        test_files.extend(glob.glob(f"/mydata/workloads/tpcds_1t_plans/query*/{i}.out"))
+    train_files = glob.glob(f"/mydata/workloads/devmind/devmind_train_plans/*.out")
+    test_files = glob.glob(f"/mydata/workloads/devmind/devmind_test_plans/*.out")
     
     return train_files, test_files
 
@@ -249,6 +258,8 @@ def prepare_training_data(args):
         if plan_feature is None:
             continue
         normalized_plan_feature = normalize_plan_features(plan_feature, literal_min_max)
+        if normalized_plan_feature is None:
+            continue
         normalized_plan_feature["query_id"] = plan_feature["query_id"]
         normalize_literal(normalized_plan_feature, literal_min_max)
         subplans = split_subplans(normalized_plan_feature)
@@ -260,7 +271,9 @@ def prepare_training_data(args):
         plan_feature = read_feature_from_plan(test_file)
         if plan_feature is None:
             continue
-        normalized_plan_feature = normalize_plan_features(plan_feature, {})
+        normalized_plan_feature = normalize_plan_features(plan_feature, literal_min_max)
+        if normalized_plan_feature is None:
+            continue
         normalized_plan_feature["query_id"] = plan_feature["query_id"]
         normalize_literal(normalized_plan_feature, literal_min_max)
         subplans = split_subplans(normalized_plan_feature)
@@ -268,13 +281,13 @@ def prepare_training_data(args):
 
     print(f"Number of test plans: {len(test_plans)}")
 
-    with open(f"krypton_utils/tpcds_stats.json") as f:
-        tpcds_stats = json.load(f)
+    with open(f"krypton_utils/devmind_stats.json") as f:
+        devmind_stats = json.load(f)
 
     test_data = {
         "parsed_plans": test_plans,
         "literal_min_max": literal_min_max,
-        "database_stats": tpcds_stats,
+        "database_stats": devmind_stats,
         "run_kwargs": {
             "hardware": "cpu"
         }
@@ -283,7 +296,7 @@ def prepare_training_data(args):
     train_data = {
         "parsed_plans": train_plans,
         "literal_min_max": literal_min_max,
-        "database_stats": tpcds_stats,
+        "database_stats": devmind_stats,
         "run_kwargs": {
             "hardware": "cpu"
         }
@@ -292,10 +305,10 @@ def prepare_training_data(args):
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
     
-    with open(os.path.join(args.output_dir, "tpcds_train_data.json"), 'w', encoding='utf-8') as f:
+    with open(os.path.join(args.output_dir, "devmind_train_data.json"), 'w', encoding='utf-8') as f:
         json.dump(train_data, f, indent=2, ensure_ascii=False)
 
-    with open(os.path.join(args.output_dir, "tpcds_test_data.json"), 'w', encoding='utf-8') as f:
+    with open(os.path.join(args.output_dir, "devmind_test_data.json"), 'w', encoding='utf-8') as f:
         json.dump(test_data, f, indent=2, ensure_ascii=False)
 
     with open(os.path.join(args.output_dir, "literal_min_max.json"), 'w', encoding='utf-8') as f:
@@ -318,19 +331,19 @@ def prepare_eval_data(args):
         for line in f:
             plan_feature = json.loads(line.strip())
             eval_plan_features_raw.append(plan_feature)
-            normalized_plan_feature = normalize_plan_features(plan_feature, {})
+            normalized_plan_feature = normalize_plan_features(plan_feature, literal_min_max)
             normalize_literal(normalized_plan_feature, literal_min_max)
             eval_plan_features.append(normalized_plan_feature)
 
     print(f"Number of new eval plans : {len(eval_plan_features)}")
 
-    with open(f"krypton_utils/tpcds_stats.json") as f:
-        tpcds_stats = json.load(f)
+    with open(f"krypton_utils/devmind_stats.json") as f:
+        devmind_stats = json.load(f)
 
     eval_data = {
         "parsed_plans": eval_plan_features,
         "literal_min_max": literal_min_max,
-        "database_stats": tpcds_stats,
+        "database_stats": devmind_stats,
         "run_kwargs": {
             "hardware": "cpu"
         }
@@ -341,25 +354,25 @@ def prepare_eval_data(args):
 
 def consider_confidence():
     is_below_threshold = []
-    with open("data/tpcds/confidence.csv", "r") as f:
+    with open("data/devmind/confidence.csv", "r") as f:
         for line in f:
             parts = line.strip().split(',')
             assert len(parts) == 2, "Each line must contain exactly two values: label and prediction"
             is_below_threshold.append(parts[1].lower() == 'true')
     
     hashcodes = []
-    with open("data/tpcds/unique_plan_feature_hashcode.txt", "r") as f:
+    with open("data/devmind/unique_plan_feature_hashcode.txt", "r") as f:
         for line in f:
             hashcodes.append(line.strip())
 
     predictions = []
-    with open("data/tpcds/eval_predictions.csv", "r") as f:
+    with open("data/devmind/eval_predictions.csv", "r") as f:
         for line in f:
             predictions.append(line.strip().split(',')[1])
     
     assert len(hashcodes) == len(predictions) == len(is_below_threshold), "Length mismatch between hashcodes, predictions and is_below_threshold"
 
-    with open("data/tpcds/model_inference.txt", 'a+', encoding='utf-8') as f:
+    with open("data/devmind/model_inference.txt", 'a+', encoding='utf-8') as f:
         for is_below, hashcode, prediction in zip(is_below_threshold, hashcodes, predictions):
             if is_below:
                 f.write(f"{hashcode},{prediction}\n")
@@ -381,7 +394,7 @@ def merge_prediction_hash(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Normalize plan features and filters from JSON files.")
-    parser.add_argument('--output_dir', type=str, default="./data/tpcds", help='Output file to save the normalized plan features.')
+    parser.add_argument('--output_dir', type=str, default="./data/devmind", help='Output file to save the normalized plan features.')
     parser.add_argument('--mode', type=str, default='train', choices=['train', 'eval', 'finalize', 'confidence'], help='Mode to run the script: train or eval.')
     args = parser.parse_args()
 
