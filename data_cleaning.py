@@ -26,6 +26,7 @@ def read_feature_from_plan(plan_file):
         plan_feature_json["query_id"] = plan_file.split('/')[-2].split('.')[0].split('query')[-1]
     except json.JSONDecodeError as e:
         print(f"Error decoding JSON from {plan_file}: {e}")
+        return None
 
     return plan_feature_json
 
@@ -140,6 +141,7 @@ def normalize_plan_features(plan_feature: dict, literal_min_max: dict):
     normalized_plan_feature = {
         "plan_parameters": {
             "op_name": plan_feature['opName'] if "join" not in plan_feature['opName'].lower() else "JoinStep",
+            "est_card": plan_feature['estCard'] if 'estCard' in plan_feature else -1,
         },
         "children": [],
         "plan_runtime": int(plan_feature["actCard"]) if "actCard" in plan_feature else 1,
