@@ -112,6 +112,7 @@ def normalize_plan_features(plan_feature: dict, literal_min_max: dict):
     normalized_plan_feature = {
         "plan_parameters": {
             "op_name": plan_feature['opName'] if "join" not in plan_feature['opName'].lower() else "JoinStep",
+            "est_card": plan_feature['estCard'] if 'estCard' in plan_feature else None,
         },
         "children": [],
         "plan_runtime": int(plan_feature["actCard"]) if "actCard" in plan_feature else 1,
