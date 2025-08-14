@@ -185,19 +185,24 @@ def normalize_filter_literal(normalized_filter_feature: dict, literal_min_max: d
         r_type = normalized_filter_feature["r_literal"]["type"]
         r_value = normalized_filter_feature["r_literal"]["literal"]
         if r_type != "column" and r_type:
-            min_val = literal_min_max[normalized_filter_feature["column"]]["min"]
-            max_val = literal_min_max[normalized_filter_feature["column"]]["max"]
-            if r_value > literal_min_max[normalized_filter_feature["column"]]["max"]:
-                print(f"r_literal value {r_value} out of bounds from [{min_val}, {max_val}] for column {normalized_filter_feature['column']}")
-                r_value = 1
-            elif r_value < literal_min_max[normalized_filter_feature["column"]]["min"]:
-                print(f"r_literal value {r_value} out of bounds from [{min_val}, {max_val}] for column {normalized_filter_feature['column']}")
-                r_value = 0
-            elif literal_min_max[normalized_filter_feature["column"]]["max"] == literal_min_max[normalized_filter_feature["column"]]["min"]:
-                r_value = 1
+            column = normalized_filter_feature["column"].split(',')[0]
+            if column in literal_min_max:
+                min_val = literal_min_max[column]["min"]
+                max_val = literal_min_max[column]["max"]
+                if r_value > literal_min_max[column]["max"]:
+                    print(f"r_literal value {r_value} out of bounds from [{min_val}, {max_val}] for column {normalized_filter_feature['column']}")
+                    r_value = 1
+                elif r_value < literal_min_max[column]["min"]:
+                    print(f"r_literal value {r_value} out of bounds from [{min_val}, {max_val}] for column {normalized_filter_feature['column']}")
+                    r_value = 0
+                elif literal_min_max[column]["max"] == literal_min_max[column]["min"]:
+                    r_value = 1
+                else:
+                    r_value = (r_value - literal_min_max[column]["min"]) / \
+                            (literal_min_max[column]["max"] - literal_min_max[column]["min"])
             else:
-                r_value = (r_value - literal_min_max[normalized_filter_feature["column"]]["min"]) / \
-                          (literal_min_max[normalized_filter_feature["column"]]["max"] - literal_min_max[normalized_filter_feature["column"]]["min"])
+                print(f"Column {column} not found in literal_min_max.")
+                r_value = 1
         normalized_filter_feature["r_literal"]["literal"] = r_value
     
     for child in normalized_filter_feature["children"]:
