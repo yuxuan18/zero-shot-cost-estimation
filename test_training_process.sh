@@ -8,15 +8,15 @@ python3 train.py \
 
 python3 train.py \
     --train_model \
-    --workload_runs ./workload_tpch.json \
-    --test_workload_runs  ./workload_tpch.json \
-    --statistics_file statistics_workload_combined.json \
-    --target /users/yuxuan18/ \
+    --workload_runs ./data/tpch/train_data.json \
+    --test_workload_runs  ./data/tpch/test_data.json \
+    --statistics_file ./data/tpch/statistics.json \
+    --target ./results/tpch \
     --hyperparameter_path setup/tuned_hyperparameters/tune_est_card_config.json \
     --max_epoch_tuples 100000 \
     --loss_class_name QLoss \
     --device cpu \
     --num_workers 16 \
     --database postgres \
-    --plan_featurization KryptonEstSystemCardDetail \
+    --plan_featurization KryptonMultiCardDetail \
     --seed 0

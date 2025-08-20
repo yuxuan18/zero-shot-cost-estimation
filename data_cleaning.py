@@ -322,7 +322,10 @@ def prepare_eval_data(args):
     eval_plan_features_raw = []
     with open(f"{args.output_dir}/unique_plan_features.jsonl", 'r', encoding='utf-8') as f:
         for line in f:
-            plan_feature = json.loads(line.strip())
+            try:
+                plan_feature = json.loads(line.strip())
+            except json.JSONDecodeError as e:
+                plan_feature = eval_plan_features_raw[-1]
             eval_plan_features_raw.append(plan_feature)
             normalized_plan_feature = normalize_plan_features(plan_feature, {})
             normalize_literal(normalized_plan_feature, literal_min_max)
@@ -384,6 +387,8 @@ def merge_prediction_hash(args):
     with open(f"{args.output_dir}/model_inference.txt", 'a+', encoding='utf-8') as f:
         for i in range(len(hashcodes)):
             f.write(f"{hashcodes[i]},{predictions[i]}\n")
+    os.system(f"cp results.csv {args.output_dir}/eval_predictions.csv")
+    os.system(f"cp embeddings.npy {args.output_dir}/eval_embeddings.npy")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Normalize plan features and filters from JSON files.")

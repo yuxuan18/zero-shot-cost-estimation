@@ -10,9 +10,11 @@ def calculate_proxy_error(training_embeddings, test_embeddings, training_labels,
         np.linalg.norm(test_embeddings, axis=1, keepdims=True) * 
         np.linalg.norm(training_embeddings, axis=1, keepdims=True).T
     )
+
+    k = int(0.0005 * len(training_embeddings)) + 1
     
     # find the top-3 similar training embeddings for each test embedding
-    top_indices = np.argsort(similarity_matrix, axis=1)[:, -100:]
+    top_indices = np.argsort(similarity_matrix, axis=1)[:, -k:]
     top_indices = np.flip(top_indices, axis=1)  # reverse to get the top 3
 
     # gather the labels of the top-3 similar training embeddings
@@ -114,7 +116,7 @@ if __name__ == "__main__":
     true_q_error = valid_labels / valid_predictions
     true_q_error = np.maximum(true_q_error, 1 / true_q_error)  # ensure Q error is >= 1
     threshold = calculate_threshold(proxy_q_error, true_q_error, 
-                                    confidence_level=0.95, q_error_cutoff=25, recall_target=0.9)
+                                    confidence_level=0.95, q_error_cutoff=5, recall_target=0.9)
     print(f"Calculated threshold: {threshold}")
     # print(f"Proxy Q error: {proxy_q_error}")
     # print(f"True Q error: {true_q_error}")
